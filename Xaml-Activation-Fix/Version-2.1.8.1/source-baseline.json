@@ -1,0 +1,170 @@
+[
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass.Catalog\\LaunchPass.Catalog.csproj",
+        "Hash":  "FC1F2CC6E91B218D6D452E4EC8F58133E93889E1EC1E7812549D5481F3929C1E"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass.Catalog\\Catalog.cs",
+        "Hash":  "A1E3AB1C99D9A9B3EE3D043B484EBE88158E3FA6E3E3D95CA262DF8D6E80EEC1"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\UrlSchemeGenerator.cs",
+        "Hash":  "EA0912EF1E4502D6E90332DD039D7BAC5067BD733CB61D2C9394423B8D3BD969"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\ThumbnailCache.cs",
+        "Hash":  "E0924F677C238AFE999631FEE2B4425B45199C2C79A34D1377062E87F516D043"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\ThemeSettingsPage.xaml.cs",
+        "Hash":  "CB92FC65E55254BDB93FB2CBFCFA2153814E260C6C18502F98429FC925347472"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\ThemeSettingsPage.xaml",
+        "Hash":  "186D6A1ABBEF7DECAD95D05EA816A42FB3F63F6D44C887F900B40A19D1AA98BC"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\StorageUtils.cs",
+        "Hash":  "80582CF5C09980EB863EB009CFD7A567ACB516F85FE6E4201793185F94ECC02A"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\SettingsPage.xaml.cs",
+        "Hash":  "CF157EDA5999A761B7C30EC7367FC7AB77D7A3EA8481ECBEB206A7670CD39D25"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\SettingsPage.xaml",
+        "Hash":  "56EFCC82FF75A5A973A20AD726E8B67ACF3F70D271495DE9CD43E08E5687C252"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\SearchPage.xaml.cs",
+        "Hash":  "56C523BCCAE29CF2BBA4BCDE6B2E96CAAB865DCB8D3F03FF2373DC42FA0D1A36"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\SearchPage.xaml",
+        "Hash":  "446686FFC60C41279246EBC355770A17889A7093C17DF421E96F85C325660386"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\InternalStorageProbe.cs",
+        "Hash":  "65CEA21E396B8FEBA82101AC6ABBD30D5A18DE80BC7871CF9EA2CAD235B0FC9C"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\InternalCatalogPage.xaml.cs",
+        "Hash":  "96EDE1E41602EC1C0E6CD815A075C71A1DC141A507F8509D46659B4828943D08"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\InternalCatalogPage.xaml",
+        "Hash":  "E60367A9AE6A4A85774C3CFC0653BCF8000A11DA8FC1F0DBB8DFB5BD4EB75881"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\InternalCatalog.cs",
+        "Hash":  "D21A8C84E8B1A9CB123755BD889EB3DA76EC5C6F4D2F0F491B7D965EA8C94F54"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\GameDetailsPage.xaml.cs",
+        "Hash":  "CEF0E6A4E0A102E5E9D22A4E65B98D78D278B97A237CA24DD312D64B937CAC40"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\GameDetailsPage.xaml",
+        "Hash":  "15D52A5BDF36E87FB0E9368DE6F8C6E71639AAB42700A6DABE95DBC4B3CFDE37"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\GameCollectionPage.xaml.cs",
+        "Hash":  "9A331A103BAE12A05CB55B8869829E07561EE831FF91F0D506D9BDF45B1F3446"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\GameCollectionPage.xaml",
+        "Hash":  "20F528FF036D4C839651A9EC939AC409AB17049DC38DF25BA449C5C66C30FAE4"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\Game.cs",
+        "Hash":  "38FC55D3453357193C3BB74F0F8F0FEB1774514B2EC33784AF93F690AA2641E3"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\DataSourceManager.cs",
+        "Hash":  "7A28BDAD51BF749063BEA04DA4017272F80CB95B9EC180B0237309506E8A65B8"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\DataSourceLaunchBox.cs",
+        "Hash":  "0E9028A22AB7A7811446A4A0A948E41F1C092E722FF75ECCE5F424A541CB25C8"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\DataSource.cs",
+        "Hash":  "76033E9F170B3C485D1FCEB8647EAA1E533281FF4C25BEBD5E1D44E5351A0460"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\Properties\\AssemblyInfo.cs",
+        "Hash":  "DC9B78DFD3C25526AED14671427EA5FE9437A3CBB986C1A9E3EF72DA374FA6D7"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\PlaylistPlayLater.cs",
+        "Hash":  "B61B14F1C22E5D819832A0E6E707AFAD593613A7670F83C380919806ACA79D7E"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\PlaylistItem.cs",
+        "Hash":  "C171049DE237B109FF477A0EDD223DBBCCE607C674DD9561615BC5C86726995D"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\Playlist.cs",
+        "Hash":  "0B80060261D0188894B7D5D54C6E566B66079D4B469DBC0E183DB72C1ED834A9"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\PlayLaterControl.xaml.cs",
+        "Hash":  "F02C375DADBB065FA8D7CC862C814F03A766FFD65EDB1D898EE50DD5D016A0B3"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\PlayLaterControl.xaml",
+        "Hash":  "673F31FF4A94686665505B94A4648D20AE0B33B9223073C773E1A034C156B5C0"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\Platform.cs",
+        "Hash":  "42AE1E4F45471F63E87D45AAEEDDF104293802D66E165166E9A6AA2750CF1677"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\Package.appxmanifest",
+        "Hash":  "8779B13FBA2D16EF257053C95BDF0874F5355D4C971286853A7948A5F90E6ACD"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\MainPage.xaml.cs",
+        "Hash":  "2240CBC99AAA8DA9C4146D4EACCFAAC8427A2E8A6820E3FA4AD24640472B0348"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\MainPage.xaml",
+        "Hash":  "2CEDB711643E0C2B79BA43F99A28F9215FE00037294F61DA6A0D139C01317C89"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\LPMediaElement.xaml.cs",
+        "Hash":  "8E8C28EB2F0DEE9D0E2E3AEF59BFD27244927B47E31B08EE4F957B2F571C750C"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\LPMediaElement.xaml",
+        "Hash":  "76C745BD029A2438A25277D5F5E00794D1B95CD00564F675468E5792EA4CBD1E"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\LogPage.xaml.cs",
+        "Hash":  "9270C63327406DF375A06FD7229DE1CDBC51B9DBF9780BC4C208DD8E461FECB5"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\LogPage.xaml",
+        "Hash":  "B5A9800D6234067C619B91521BC812EFF8AE2EFC19F8CE9EB00BD2044CA5CFBE"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\LaunchPassThemeSettings.cs",
+        "Hash":  "C8CAC22E654586F9AD7A8370D82961527D049A9C9E5920383D9BC69E20E8D9EE"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\LaunchPassCustomPanel.cs",
+        "Hash":  "813526AFDE752D7141C8B9D60CB49BDE66CE72F28C37106C4C4D836C1E2191DE"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\LaunchPass.csproj",
+        "Hash":  "29FCBA50239A5F8202D970E7BECE458F5D0401E74455E57865BF7941149823C8"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\App.xaml.cs",
+        "Hash":  "8DE22E3660B4613D11B4C5D7A779A85DE6C3D65BA37C42EB9A467EFBAB9A3F65"
+    },
+    {
+        "Path":  "C:\\TRANSFER\\LaunchPass\\App.xaml",
+        "Hash":  "3E32C8DD0CF36D5088DBC34A8519F77A3256C6C4AAA00BE4BAACC635388769A2"
+    }
+]

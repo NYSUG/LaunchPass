@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using LaunchPass.Catalog;
 using Windows.System;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
@@ -19,19 +22,26 @@ namespace RetroPass
     public sealed partial class GameCollectionPage : Page
     {
         private Playlist playlist;
+        private IReadOnlyList<Playlist> internalCategories;
+        private readonly Dictionary<Playlist, int> internalSelections = new Dictionary<Playlist, int>();
+        private IDisposable cabinetInput;
+        private bool internalStyleSet, cabinetLaunching;
+        private int internalLoadGeneration;
 
         public class GameCollectionPageNavigateParams
         {
-            public GameCollectionPageNavigateParams(PlaylistItem p1, Playlist p2, PlaylistPlayLater p3)
+            public GameCollectionPageNavigateParams(PlaylistItem p1, Playlist p2, PlaylistPlayLater p3, IReadOnlyList<Playlist> categories = null)
             {
                 playlistItem = p1;
                 playlist = p2;
                 playlistPlayLater = p3;
+                internalCategories = categories;
             }
 
             public PlaylistItem playlistItem;
             public Playlist playlist;
             public PlaylistPlayLater playlistPlayLater;
+            public IReadOnlyList<Playlist> internalCategories;
         }
 
         private PlaylistPlayLater playlistPlayLater;
@@ -45,6 +55,13 @@ namespace RetroPass
         async private void GameCollectionPage_Loaded(object sender, RoutedEventArgs e)
         {
             mediaPlayer.MediaPath = ((App)Application.Current).CurrentThemeSettings.GetMediaPath("GamePage");
+
+            if (((App)Application.Current).InternalCatalogMode)
+            {
+                try { await LoadInternalPlaylistAsync(); }
+                catch (Exception ex) { StartupLog.Write("Internal collection load failed: " + ex); }
+                return;
+            }
 
             if (PlatformGridView.ItemsSource == null || PlatformGridView.ItemsSource != playlist.PlaylistItems)
             {
@@ -76,6 +93,8 @@ namespace RetroPass
 
         protected override async void OnKeyDown(KeyRoutedEventArgs e)
         {
+            // Cabinet keyboard actions are centralized; retain the existing gamepad/external path.
+            if (CabinetInput.Enabled && !CabinetInput.IsGamepad(e.OriginalKey)) { base.OnKeyDown(e); return; }
             switch (e.Key)
             {
                 case VirtualKey.GamepadX:
@@ -99,19 +118,7 @@ namespace RetroPass
 
                 case VirtualKey.GamepadY:
                 case VirtualKey.Y:
-                    var pl1 = new List<Playlist>();
-                    pl1.Add(playlist);
-                    SearchPage.Instance.OnNavigatedTo(pl1);
-                    await SearchPage.Instance.ShowAsync();
-                    SearchPage.Instance.OnNavigatedFrom();
-
-                    if (SearchPage.Instance.selectedPlaylistItem != null)
-                    {
-                        GameDetailsPage popupDetails = new GameDetailsPage();
-                        popupDetails.OnNavigatedTo(SearchPage.Instance.selectedPlaylistItem);
-                        await popupDetails.ShowAsync();
-                        popupDetails.OnNavigatedFrom();
-                    }
+                    await ShowSearchAsync();
                     break;
 
                 case VirtualKey.GamepadMenu:
@@ -147,6 +154,14 @@ namespace RetroPass
 
             UpdateNumGamesText(playlist.PlaylistItems.Count);
             playlistPlayLater = param.playlistPlayLater;
+            internalCategories = param.internalCategories;
+            if (((App)Application.Current).InternalCatalogMode)
+            {
+                foreach (var old in internalSelections.Keys.Where(old => !ReferenceEquals(old, playlistPlayLater) &&
+                    (internalCategories == null || !internalCategories.Contains(old))).ToArray()) internalSelections.Remove(old);
+            }
+            cabinetInput?.Dispose();
+            cabinetInput = CabinetInput.Attach(this, HandleCabinetAction);
 
             base.OnNavigatedTo(e);
         }
@@ -158,9 +173,112 @@ namespace RetroPass
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
+            cabinetInput?.Dispose(); cabinetInput = null;
+            internalLoadGeneration++;
             //CoreWindow.GetForCurrentThread().KeyDown -= OnKeyDown;
             SystemNavigationManager.GetForCurrentView().BackRequested -= OnBackRequested;
             base.OnNavigatedFrom(e);
+        }
+
+        private async Task LoadInternalPlaylistAsync()
+        {
+            int generation = ++internalLoadGeneration;
+            var loading = playlist;
+            if (!internalStyleSet)
+            {
+                var style = new Style(typeof(GridViewItem)) { BasedOn = PlatformGridView.ItemContainerStyle };
+                style.Setters.Add(new Setter(Control.BackgroundProperty, new SolidColorBrush(Windows.UI.Color.FromArgb(180, 35, 90, 150))));
+                PlatformGridView.ItemContainerStyle = style;
+                internalStyleSet = true;
+            }
+            int index;
+            if (!internalSelections.TryGetValue(loading, out index)) index = 0;
+            PlatformGridView.ItemsSource = loading.PlaylistItems;
+            NameCollection.Text = loading.Name;
+            SelectInternal(CabinetNavigation.Step(index, 0, loading.PlaylistItems.Count));
+            foreach (var item in loading.PlaylistItems)
+            {
+                var image = await item.game.GetImageThumbnailAsync();
+                if (generation != internalLoadGeneration || !ReferenceEquals(playlist, loading)) return;
+                item.bitmapImage = image;
+            }
+        }
+        private void SelectInternal(int index)
+        {
+            PlatformGridView.SelectedIndex = index;
+            UpdateInternalSelection();
+            if (index < 0) return;
+            if (PlatformGridView.SelectedItem == null) return;
+            PlatformGridView.ScrollIntoView(PlatformGridView.SelectedItem);
+            PlatformGridView.UpdateLayout();
+            var container = PlatformGridView.ContainerFromIndex(index) as Control;
+            if (container != null)
+            {
+                var button = FindChild<Button>(container, "GameButton");
+                (button ?? container).Focus(FocusState.Keyboard);
+                container.StartBringIntoView(new BringIntoViewOptions { VerticalAlignmentRatio = 0.5 });
+            }
+        }
+        private void PlatformGridView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (((App)Application.Current).InternalCatalogMode) UpdateInternalSelection();
+        }
+        private void UpdateInternalSelection()
+        {
+            if (playlist == null) return;
+            int index = PlatformGridView.SelectedIndex;
+            internalSelections[playlist] = index;
+            var item = PlatformGridView.SelectedItem as PlaylistItem;
+            NumGamesCollectionText.Text = playlist.PlaylistItems.Count + " games in collection" +
+                (item == null ? "" : " — " + (index + 1) + "/" + playlist.PlaylistItems.Count + " " + item.game.Title);
+        }
+        private async void HandleCabinetAction(CabinetAction action)
+        {
+            try
+            {
+                int count = playlist.PlaylistItems.Count;
+                if (action == CabinetAction.Search) { await ShowSearchAsync(); return; }
+                if (action == CabinetAction.Back) { if (Frame.CanGoBack) Frame.GoBack(); return; }
+                if (action == CabinetAction.Select)
+                {
+                    var item = PlatformGridView.SelectedItem as PlaylistItem;
+                    if (item == null || cabinetLaunching) return;
+                    cabinetLaunching = true;
+                    try { await GameDetailsPage.StartContent(item); } finally { cabinetLaunching = false; }
+                    return;
+                }
+                if (action == CabinetAction.PreviousCategory || action == CabinetAction.NextCategory)
+                {
+                    if (internalCategories == null || internalCategories.Count < 2) return;
+                    int category = -1;
+                    for (int i = 0; i < internalCategories.Count; i++) if (ReferenceEquals(playlist, internalCategories[i])) category = i;
+                    if (category < 0) return;
+                    playlist = internalCategories[CabinetNavigation.Step(category, action == CabinetAction.PreviousCategory ? -1 : 1, internalCategories.Count, true)];
+                    await LoadInternalPlaylistAsync();
+                    return;
+                }
+                int delta = action == CabinetAction.PreviousGame || action == CabinetAction.PreviousLetter ? -1 : 1;
+                int next = action == CabinetAction.PreviousLetter || action == CabinetAction.NextLetter ?
+                    CabinetNavigation.Letter(playlist.PlaylistItems.Select(item => item.game.Title).ToArray(), PlatformGridView.SelectedIndex, delta) :
+                    CabinetNavigation.Step(PlatformGridView.SelectedIndex, delta, count);
+                SelectInternal(next);
+            }
+            catch (Exception ex) { StartupLog.Write("Internal cabinet navigation failed: " + ex); }
+        }
+        private async Task ShowSearchAsync()
+        {
+            var pl1 = new List<Playlist>();
+            pl1.Add(playlist);
+            SearchPage.Instance.OnNavigatedTo(pl1);
+            try { await SearchPage.Instance.ShowAsync(); }
+            finally { SearchPage.Instance.OnNavigatedFrom(); }
+            if (SearchPage.Instance.selectedPlaylistItem != null)
+            {
+                GameDetailsPage popupDetails = new GameDetailsPage();
+                popupDetails.OnNavigatedTo(SearchPage.Instance.selectedPlaylistItem);
+                try { await popupDetails.ShowAsync(); }
+                finally { popupDetails.OnNavigatedFrom(); }
+            }
         }
 
         private void ScrollToCenter(UIElement sender, BringIntoViewRequestedEventArgs args)
@@ -320,17 +438,17 @@ namespace RetroPass
         {
             var item = e.OriginalSource as DependencyObject;
             var childListView = FindChild<UIElement>(item, "GameNameDisplay");
-            childListView.Visibility = Visibility.Visible;
+            if (childListView != null) childListView.Visibility = Visibility.Visible;
 
             PlaylistItem playlistItem = PlatformGridView.SelectedItem as PlaylistItem;
-            PlayLaterControl.UpdatePlayLaterControl(playlistItem, playlistPlayLater);
+            if (playlistItem != null) PlayLaterControl.UpdatePlayLaterControl(playlistItem, playlistPlayLater);
         }
 
         private void Grid_LostFocus(object sender, RoutedEventArgs e)
         {
             var item = e.OriginalSource as DependencyObject;
             var childListView = FindChild<UIElement>(item, "GameNameDisplay");
-            childListView.Visibility = Visibility.Collapsed;
+            if (childListView != null) childListView.Visibility = Visibility.Collapsed;
         }
 
         private async void PlatformGridView_ItemClick(object sender, ItemClickEventArgs e)
@@ -338,8 +456,8 @@ namespace RetroPass
             var item = e.ClickedItem as PlaylistItem;
             GameDetailsPage popup = new GameDetailsPage();
             popup.OnNavigatedTo(item);
-            ContentDialogResult result = await popup.ShowAsync();
-            popup.OnNavigatedFrom();
+            try { await popup.ShowAsync(); }
+            finally { popup.OnNavigatedFrom(); }
         }
     }
 }

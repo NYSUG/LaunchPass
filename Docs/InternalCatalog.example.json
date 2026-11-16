@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "contentRoot": "U:\\Users\\UserMgr0\\AppData\\Local\\Packages\\1e4cf179-f3c2-404f-b9f3-cb2070a5aad8_8ngdn9a6dx1ma\\LocalState\\roms",
+  "platforms": [
+    {
+      "id": "arcade",
+      "title": "Arcade",
+      "defaultCore": "mame2003_plus_libretro.dll"
+    },
+    {
+      "id": "genesis",
+      "title": "Genesis",
+      "defaultCore": "genesis_plus_gx_libretro.dll"
+    },
+    {
+      "id": "snes",
+      "title": "SNES",
+      "defaultCore": "snes9x_libretro.dll"
+    }
+  ],
+  "games": [
+    {
+      "id": "arcade-1941",
+      "platform": "arcade",
+      "title": "1941",
+      "rom": "arcade/1941.zip",
+      "artwork": "Artwork/1941.png"
+    },
+    {
+      "id": "arcade-1942",
+      "platform": "arcade",
+      "title": "1942 (supply ROM)",
+      "rom": "arcade/1942.zip"
+    },
+    {
+      "id": "arcade-override",
+      "platform": "arcade",
+      "title": "Arcade override (replace ROM/core)",
+      "rom": "arcade/replace-me.zip",
+      "core": "fbneo_libretro.dll"
+    },
+    {
+      "id": "genesis-example",
+      "platform": "genesis",
+      "title": "Genesis (replace with your game)",
+      "rom": "genesis/replace-me.md"
+    },
+    {
+      "id": "snes-example",
+      "platform": "snes",
+      "title": "SNES (replace with your game)",
+      "rom": "snes/replace-me.sfc"
+    }
+  ]
+}

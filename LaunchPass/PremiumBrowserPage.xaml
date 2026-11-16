@@ -1,0 +1,99 @@
+<Page
+    x:Class="RetroPass.PremiumBrowserPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:RetroPass"
+    Background="#080D18" NavigationCacheMode="Required">
+    <Page.Resources>
+        <DataTemplate x:Key="WheelTemplate" x:DataType="local:PremiumWheelItem">
+            <Border BorderBrush="{x:Bind Outline, Mode=OneWay}" BorderThickness="3" Background="{x:Bind Fill, Mode=OneWay}" CornerRadius="5">
+            <Grid Height="{x:Bind ItemHeight, Mode=OneWay}" Padding="12,6">
+                <TextBlock Text="{x:Bind Title, Mode=OneWay}" FontSize="{x:Bind TitleSize, Mode=OneWay}" FontWeight="SemiBold"
+                           Foreground="White" TextWrapping="Wrap" VerticalAlignment="Center"
+                           Visibility="{x:Bind TitleVisibility, Mode=OneWay}" />
+                <Image Source="{x:Bind Logo, Mode=OneWay}" Stretch="Uniform" />
+            </Grid>
+            </Border>
+        </DataTemplate>
+        <Style x:Key="WheelContainer" TargetType="ListViewItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,3" />
+            <Setter Property="BorderThickness" Value="3" />
+        </Style>
+    </Page.Resources>
+    <Grid x:Name="PremiumRoot">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid>
+            <Grid.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#101F35" Offset="0" />
+                    <GradientStop Color="#080D18" Offset="1" />
+                </LinearGradientBrush>
+            </Grid.Background>
+            <Image x:Name="Backdrop" Stretch="UniformToFill" Opacity="0.45" />
+            <Rectangle IsHitTestVisible="False">
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#40101928" Offset="0" />
+                        <GradientStop Color="#EC080D18" Offset="0.7" />
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            <Grid x:Name="SafeContent" Margin="48,27">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <TextBlock x:Name="CategoryText" FontSize="22" FontWeight="SemiBold" Foreground="#73E1F5" TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="PositionText" Grid.Column="1" FontSize="16" Foreground="#B9C5D7" VerticalAlignment="Center" Margin="16,0,0,0" />
+                </Grid>
+                <Grid Grid.Row="1" Margin="0,12">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="3*" /><ColumnDefinition Width="2*" /></Grid.ColumnDefinitions>
+                    <Grid Margin="0,0,24,0">
+                        <Grid.RowDefinitions><RowDefinition Height="2*" /><RowDefinition Height="3*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                        <Grid>
+                            <TextBlock x:Name="HeroTitle" FontSize="36" FontWeight="Bold" Foreground="White" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            <Image x:Name="HeroLogo" Stretch="Uniform" HorizontalAlignment="Left" />
+                        </Grid>
+                        <Border Grid.Row="1" Background="#60121E30" BorderBrush="#384B65" BorderThickness="1" CornerRadius="6" Margin="0,8">
+                            <Grid>
+                                <StackPanel x:Name="ScreenshotFallback" VerticalAlignment="Center" Margin="18">
+                                    <TextBlock Text="READY TO PLAY" Foreground="#73E1F5" FontSize="16" CharacterSpacing="180" />
+                                    <TextBlock x:Name="FallbackTitle" FontSize="24" FontWeight="SemiBold" Foreground="White" TextWrapping="Wrap" Margin="0,8,0,0" />
+                                </StackPanel>
+                                <Image x:Name="Screenshot" Stretch="Uniform" />
+                            </Grid>
+                        </Border>
+                        <StackPanel Grid.Row="2" Margin="0,6,0,0">
+                            <TextBlock x:Name="GameTitle" FontSize="21" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="White" />
+                            <TextBlock x:Name="MetadataText" FontSize="15" TextWrapping="Wrap" Foreground="#B9C5D7" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </Grid>
+                    <ListView x:Name="Wheel" Grid.Column="1" Background="#60080D18"
+                              SelectionMode="Single" IsItemClickEnabled="True"
+                              ItemTemplate="{StaticResource WheelTemplate}" ItemContainerStyle="{StaticResource WheelContainer}"
+                              SelectionChanged="Wheel_SelectionChanged" ItemClick="Wheel_ItemClick"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                              ScrollViewer.VerticalScrollBarVisibility="Hidden">
+                        <ListView.Resources>
+                            <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="#244F67" />
+                            <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="#244F67" />
+                            <SolidColorBrush x:Key="ListViewItemSelectedBackgroundThemeBrush" Color="#244F67" />
+                        </ListView.Resources>
+                    </ListView>
+                </Grid>
+                <StackPanel Grid.Row="2">
+                    <TextBlock Text="↑ ↓ Games    ← → Category    SELECT / A Play    BACK / B Library" FontSize="15" Foreground="#D8E5F3" TextWrapping="Wrap" />
+                    <TextBlock x:Name="StatusText" FontSize="14" Foreground="#73E1F5" TextWrapping="Wrap" Margin="0,4,0,0" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Grid>
+</Page>

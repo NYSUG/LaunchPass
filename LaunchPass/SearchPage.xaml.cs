@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using LaunchPass.Catalog;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
+using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media.Imaging;
 
 // The Content Dialog item template is documented at https://go.microsoft.com/fwlink/?LinkId=234238
@@ -30,6 +32,7 @@ namespace RetroPass
 
         public bool IsOpened { get; private set; }
         public PlaylistItem selectedPlaylistItem;
+        private IDisposable cabinetInput;
         private List<Playlist> playlists;
         private ObservableCollection<PlaylistItem> searchResultList = new ObservableCollection<PlaylistItem>();
         private bool firstFocus;
@@ -54,6 +57,8 @@ namespace RetroPass
 
         public void OnNavigatedTo(List<Playlist> playlists)
         {
+            cabinetInput?.Dispose();
+            cabinetInput = CabinetInput.Attach(this, HandleCabinetAction);
             mediaPlayer.MediaPath = ((App)Application.Current).CurrentThemeSettings.GetMediaPath("SearchPage");
 
             firstFocus = true;
@@ -96,7 +101,42 @@ namespace RetroPass
 
         public void OnNavigatedFrom()
         {
+            cabinetInput?.Dispose(); cabinetInput = null;
             this.Closing -= OnClosing;
+        }
+
+        private void HandleCabinetAction(CabinetAction action)
+        {
+            if (action == CabinetAction.Search) { SearchText.Focus(FocusState.Keyboard); return; }
+            if (action == CabinetAction.Back) { selectedPlaylistItem = null; Hide(); return; }
+            int count = searchResultList.Count;
+            if (action == CabinetAction.Select)
+            {
+                if (count == 0) return;
+                if (FocusManager.GetFocusedElement() is TextBox) { FocusCabinetResult(0); return; }
+                selectedPlaylistItem = SearchGridView.SelectedItem as PlaylistItem;
+                if (selectedPlaylistItem != null) Hide();
+                return;
+            }
+            int delta = action == CabinetAction.PreviousGame || action == CabinetAction.PreviousCategory || action == CabinetAction.PreviousLetter ? -1 : 1;
+            int next = action == CabinetAction.PreviousLetter || action == CabinetAction.NextLetter ?
+                CabinetNavigation.Letter(searchResultList.Select(item => item.game.Title).ToArray(), SearchGridView.SelectedIndex, delta) :
+                CabinetNavigation.Step(SearchGridView.SelectedIndex, delta, count);
+            FocusCabinetResult(next);
+        }
+        private void FocusCabinetResult(int index)
+        {
+            SearchGridView.SelectedIndex = index;
+            if (index < 0) return;
+            SearchGridView.ScrollIntoView(SearchGridView.SelectedItem);
+            SearchGridView.UpdateLayout();
+            var container = SearchGridView.ContainerFromIndex(index) as Control;
+            if (container != null)
+            {
+                var button = GameCollectionPage.FindChild<Button>(container, "GameButton");
+                (button ?? container).Focus(FocusState.Keyboard);
+                container.StartBringIntoView(new BringIntoViewOptions { VerticalAlignmentRatio = 0.5 });
+            }
         }
 
         private void OnClosing(ContentDialog sender, ContentDialogClosingEventArgs args)

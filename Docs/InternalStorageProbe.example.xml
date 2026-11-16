@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<InternalStorageProbe>
+  <Enabled>true</Enabled>
+  <!-- Fill both values from this Xbox's RetroArch installation. No defaults are supplied. -->
+  <RomPath></RomPath>
+  <CoreFileName></CoreFileName>
+</InternalStorageProbe>

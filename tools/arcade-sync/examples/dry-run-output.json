@@ -1,0 +1,99 @@
+{
+  "mode": "dry-run",
+  "configured_platforms": [
+    "arcade",
+    "genesis",
+    "snes"
+  ],
+  "scanned_roms": 4,
+  "upload_bytes": 48,
+  "uploads": [
+    {
+      "rom": "arcade/1942.zip",
+      "bytes": 17,
+      "reason": "size_changed",
+      "previous_bytes": 3,
+      "directory": "LocalState\\roms\\arcade"
+    },
+    {
+      "rom": "genesis/example.md",
+      "bytes": 17,
+      "reason": "new",
+      "previous_bytes": null,
+      "directory": "LocalState\\roms\\genesis"
+    },
+    {
+      "rom": "snes/example.sfc",
+      "bytes": 14,
+      "reason": "new",
+      "previous_bytes": null,
+      "directory": "LocalState\\roms\\snes"
+    }
+  ],
+  "unchanged_roms": [
+    "arcade/1941.zip"
+  ],
+  "missing_directories": [],
+  "catalog": {
+    "destination": "LaunchPass LocalState\\InternalCatalog.json",
+    "action": "update",
+    "added_game_ids": [
+      "arcade-88e89c2c2dca1894",
+      "genesis-b4a0ee7604421b7c",
+      "snes-fb609be4a19044fc"
+    ],
+    "updated_game_ids": [],
+    "retained_unscanned_entries": 0
+  },
+  "remote_deletions": [],
+  "generated_catalog": {
+    "version": 1,
+    "contentRoot": "U:\\Users\\UserMgr0\\AppData\\Local\\Packages\\RetroArch_test\\LocalState\\roms",
+    "platforms": [
+      {
+        "id": "arcade",
+        "title": "Arcade",
+        "defaultCore": "mame2003_plus_libretro.dll"
+      },
+      {
+        "id": "genesis",
+        "title": "Genesis",
+        "defaultCore": "genesis_plus_gx_libretro.dll"
+      },
+      {
+        "id": "snes",
+        "title": "SNES",
+        "defaultCore": "snes9x_libretro.dll"
+      }
+    ],
+    "games": [
+      {
+        "id": "arcade-1941",
+        "platform": "arcade",
+        "title": "1941 (my edited title)",
+        "rom": "arcade/1941.zip",
+        "artwork": "Artwork/1941.png",
+        "notes": "User metadata is retained verbatim."
+      },
+      {
+        "id": "arcade-88e89c2c2dca1894",
+        "platform": "arcade",
+        "title": "1942",
+        "rom": "arcade/1942.zip",
+        "core": "fbneo_libretro.dll"
+      },
+      {
+        "id": "genesis-b4a0ee7604421b7c",
+        "platform": "genesis",
+        "title": "example",
+        "rom": "genesis/example.md"
+      },
+      {
+        "id": "snes-fb609be4a19044fc",
+        "platform": "snes",
+        "title": "example",
+        "rom": "snes/example.sfc"
+      }
+    ]
+  }
+}

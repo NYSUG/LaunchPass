@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <RestoreConfigFile>$(MSBuildThisFileDirectory)NuGet.Config</RestoreConfigFile>
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Compile the production generator, not a copy of its implementation. -->
+    <Compile Include="../../LaunchPass/UrlSchemeGenerator.cs" Link="UrlSchemeGenerator.cs" />
+    <Compile Include="../../LaunchPass/Platform.cs" Link="Platform.cs" />
+  </ItemGroup>
+</Project>

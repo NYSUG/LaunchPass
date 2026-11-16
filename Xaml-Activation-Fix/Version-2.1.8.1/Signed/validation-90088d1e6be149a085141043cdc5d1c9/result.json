@@ -1,0 +1,17 @@
+{
+    "Status":  "PASS",
+    "SignedBundle":  "C:\\TRANSFER\\Xaml-Activation-Fix\\Version-2.1.8.1\\Signed\\LaunchPass_2.1.8.1_x64.msix",
+    "SignedSHA256":  "9971557BEFE4CA0507C00863CCD5B1CC3E9D31BB201E5CFACBD8141E2FD674F1",
+    "SourceSHA256":  "2FB0BA353E88FA0E3771AA95E07D01C92B9AC350F8225001FAE94BE0DDF9432E",
+    "BundleBlockMapFilesValidated":  0,
+    "Packages":  [
+                     {
+                         "Package":  "LaunchPass_2.1.8.1_x64.msix",
+                         "PayloadFilesCompared":  74,
+                         "WindowsBlockMapFilesValidated":  74,
+                         "CatalogPEMembersValidated":  6,
+                         "Signature":  "SignTool + pinned SHA256 CMS: PASS"
+                     }
+                 ],
+    "Artifacts":  "C:\\TRANSFER\\Xaml-Activation-Fix\\Version-2.1.8.1\\Signed\\validation-90088d1e6be149a085141043cdc5d1c9"
+}

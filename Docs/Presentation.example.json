@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "games": [
+    {
+      "id": "arcade-1941",
+      "year": "1990",
+      "manufacturer": "Capcom",
+      "genre": "Vertical shooter"
+    }
+  ]
+}

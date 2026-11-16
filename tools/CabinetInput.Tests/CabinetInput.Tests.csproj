@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../LaunchPass.Catalog/LaunchPass.Catalog.csproj" />
+    <None Include="../../Docs/CabinetInput.example.json" Link="defaults.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../Docs/CabinetInput.mode1-candidate.json" Link="candidate.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

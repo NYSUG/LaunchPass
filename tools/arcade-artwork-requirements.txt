@@ -1,0 +1,2 @@
+# Standalone importer dependency only; no UWP/project dependency changes.
+Pillow>=12.1.1,<14

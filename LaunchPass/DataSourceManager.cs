@@ -1,4 +1,3 @@
-using Microsoft.Toolkit.Uwp.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -557,7 +556,7 @@ namespace RetroPass
                             {
                                 foreach (var item in ((App)Application.Current).CurrentThemeSettings.Backgrounds.Background)
                                 {
-                                    if (!await bgFolder.FileExistsAsync(item.File))
+                                    if (!(await bgFolder.TryGetItemAsync(item.File) is StorageFile))
                                     {
                                         var bgStoreFile = await StorageFile.GetFileFromApplicationUriAsync(new Uri("ms-appx:///Assets/Background/LaunchPass-LP.mp4"));
                                         await bgStoreFile.CopyAsync(bgFolder, bgStoreFile.Name, NameCollisionOption.ReplaceExisting);
@@ -586,7 +585,7 @@ namespace RetroPass
                                 fontFolder = await launchPassFolderCurrent.CreateFolderAsync("Fonts");
 
                             StorageFile fontStoreFile = await StorageFile.GetFileFromApplicationUriAsync(new Uri("ms-appx:///Assets/Fonts/Xbox.ttf"));
-                            if (!await fontFolder.FileExistsAsync(fontStoreFile.Name))
+                            if (!(await fontFolder.TryGetItemAsync(fontStoreFile.Name) is StorageFile))
                             {
                                 await fontStoreFile.CopyAsync(fontFolder, fontStoreFile.Name, NameCollisionOption.ReplaceExisting);
                                 ((App)Application.Current).CurrentThemeSettings.Font = "Xbox.ttf";

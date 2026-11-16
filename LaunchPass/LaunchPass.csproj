@@ -11,8 +11,8 @@
     <AssemblyName>LaunchPass</AssemblyName>
     <DefaultLanguage>en-US</DefaultLanguage>
     <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
-    <TargetPlatformVersion Condition=" '$(TargetPlatformVersion)' == '' ">10.0.20348.0</TargetPlatformVersion>
-    <TargetPlatformMinVersion>10.0.20348.0</TargetPlatformMinVersion>
+    <TargetPlatformVersion>10.0.18362.0</TargetPlatformVersion>
+<TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <MinimumVisualStudioVersion>14</MinimumVisualStudioVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{A5A43C5B-DE2A-4C0C-9213-0A381AF9435A};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -144,6 +144,16 @@
     <Compile Include="DataSource.cs" />
     <Compile Include="DataSourceLaunchBox.cs" />
     <Compile Include="DataSourceManager.cs" />
+    <Compile Include="InternalStorageProbe.cs" />
+    <Compile Include="InternalCatalog.cs" />
+    <Compile Include="InputDiagnostics.cs" />
+    <Compile Include="CabinetInput.cs" />
+    <Compile Include="InternalCatalogPage.xaml.cs">
+      <DependentUpon>InternalCatalogPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="PremiumBrowserPage.xaml.cs">
+      <DependentUpon>PremiumBrowserPage.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Game.cs" />
     <Compile Include="GameCollectionPage.xaml.cs">
       <DependentUpon>GameCollectionPage.xaml</DependentUpon>
@@ -172,9 +182,14 @@
       <DependentUpon>SettingsPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="StorageUtils.cs" />
-    <Compile Include="ThemeSettingsPage.xaml.cs" />
     <Compile Include="ThumbnailCache.cs" />
     <Compile Include="UrlSchemeGenerator.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\LaunchPass.Catalog\LaunchPass.Catalog.csproj">
+      <Project>{BA04B3B1-8021-4A49-A020-5A79C0184471}</Project>
+      <Name>LaunchPass.Catalog</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">
@@ -253,6 +268,14 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Page Include="PremiumBrowserPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="InternalCatalogPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="GameCollectionPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

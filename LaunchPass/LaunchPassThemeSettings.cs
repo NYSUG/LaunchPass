@@ -37,6 +37,7 @@ namespace RetroPass
 
         public string GetMediaPath(string PageName)
         {
+            if (((App)Application.Current).InternalCatalogMode) return string.Empty;
             string path = string.Empty;
 
             if (!string.IsNullOrEmpty(PageName))

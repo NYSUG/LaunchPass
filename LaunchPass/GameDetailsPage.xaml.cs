@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using LaunchPass.Catalog;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Windows.Media.Core;
@@ -7,6 +8,7 @@ using Windows.Storage;
 using Windows.System;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
+using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media.Imaging;
 
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=234238
@@ -25,6 +27,7 @@ namespace RetroPass
     public sealed partial class GameDetailsPage : ContentDialog
     {
         public PlaylistItem playlistItem;
+        private IDisposable cabinetInput;
         //BitmapImage ImagePoster;
 
         //private ObservableCollection<DetailImage> imageList = new ObservableCollection<DetailImage>();
@@ -47,6 +50,8 @@ namespace RetroPass
 
         public void OnNavigatedTo(PlaylistItem playlistItem)
         {
+            cabinetInput?.Dispose();
+            cabinetInput = CabinetInput.Attach(this, HandleCabinetAction);
             mediaPlayer.MediaPath = ((App)Application.Current).CurrentThemeSettings.GetMediaPath("DetailsPage");
 
             //CoreWindow.GetForCurrentThread().KeyDown += OnKeyDown;
@@ -100,7 +105,21 @@ namespace RetroPass
 
         public void OnNavigatedFrom()
         {
+            cabinetInput?.Dispose(); cabinetInput = null;
             this.Closing -= OnGameDetailsClosing;
+        }
+
+        private void HandleCabinetAction(CabinetAction action)
+        {
+            if (action == CabinetAction.PreviousLetter || action == CabinetAction.NextLetter || action == CabinetAction.Search) return;
+            if (action == CabinetAction.Back) { Hide(); return; }
+            if (action == CabinetAction.Select)
+            {
+                var focused = FocusManager.GetFocusedElement() as Button;
+                CabinetInput.Invoke(focused != null && CabinetInput.Contains(this, focused) ? focused : ButtonPlay);
+                return;
+            }
+            CabinetInput.MoveFocus(this, action);
         }
 
         private void OnGameDetailsClosing(ContentDialog sender, ContentDialogClosingEventArgs args)
@@ -224,6 +243,17 @@ namespace RetroPass
         public static async Task StartContent(PlaylistItem playlistItem)
         {
             var game = playlistItem.game;
+            if (game is InternalCatalogGame catalogGame)
+            {
+                try { await catalogGame.LaunchAsync(); }
+                catch (Exception ex)
+                {
+                    InternalCatalogGame.Log("Launch failed: " + ex);
+                    // A dialog may already be open (game details); report there when possible.
+                    await new Windows.UI.Popups.MessageDialog(ex.Message, "RetroArch launch failed").ShowAsync();
+                }
+                return;
+            }
             playlistItem.playlist.SetLastPlayed(playlistItem);
 
             //check if it exists

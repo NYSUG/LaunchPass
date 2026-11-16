@@ -117,6 +117,7 @@
             IsItemClickEnabled="True"
             IsTabStop="True"
             ItemClick="PlatformGridView_ItemClick"
+            SelectionChanged="PlatformGridView_SelectionChanged"
             ItemTemplate="{StaticResource GameTemplate}"
             ScrollViewer.VerticalScrollBarVisibility="Hidden"
             SelectionMode="Single"
@@ -143,7 +144,7 @@
                                     CornerRadius="4,4,4,4"
                                     PressedBackground="Transparent"
                                     SelectedPointerOverBackground="Transparent"
-                                    SelectedBackground="Transparent"
+                                    SelectedBackground="{TemplateBinding Background}"
                                     SelectedPressedBackground="Transparent" />
                                 </ControlTemplate>
                             </Setter.Value>

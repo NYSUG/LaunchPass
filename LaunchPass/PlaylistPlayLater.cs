@@ -24,6 +24,7 @@ namespace RetroPass
 
         private string PlaylistItemKey(PlaylistItem playlistItem)
         {
+            if (playlistItem.game is InternalCatalogGame catalogGame) return "internal:" + catalogGame.Entry.Id;
             return playlistItem.game.Title + "_" + playlistItem.game.GamePlatform.Name;
         }
 
@@ -51,6 +52,7 @@ namespace RetroPass
 
         private async Task Save()
         {
+            if (((App)Application.Current).InternalCatalogMode) return;
             //save the file to app local directory
             StorageFile filename = await folder.CreateFileAsync(fileName, CreationCollisionOption.ReplaceExisting);
             XmlSerializer x = new XmlSerializer(typeof(PlaylistRetroPass));
@@ -168,6 +170,14 @@ namespace RetroPass
 
         private void AddToGames(PlaylistItem plItem)
         {
+            if (plItem.game is InternalCatalogGame)
+            {
+                var internalItem = new PlaylistItem { playlist = this, game = plItem.game };
+                PlaylistItems.Add(internalItem);
+                PlaylistItemsDict.Add(PlaylistItemKey(internalItem), internalItem);
+                UpdateGamesLandingPage();
+                return;
+            }
             //need to convert game into GameRetroPass
             //this copies values from specific Game subclass to GameRetroPass
             var game = new GameRetroPass(plItem.game);

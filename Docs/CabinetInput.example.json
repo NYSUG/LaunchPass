@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "enabled": true,
+  "repeatDelayMs": 350,
+  "repeatIntervalMs": 140,
+  "bindings": [
+    { "key": "Up", "action": "PreviousGame" },
+    { "key": "Down", "action": "NextGame" },
+    { "key": "Left", "action": "PreviousCategory" },
+    { "key": "Right", "action": "NextCategory" },
+    { "key": "Enter", "action": "Select" },
+    { "key": "Escape", "action": "Back" },
+    { "key": "Y", "action": "Search" }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "packages": {
+    "InstalledPackages": [
+      {
+        "Name": "RetroArch",
+        "PackageFullName": "RetroArch_1.0.0.0_x64__test",
+        "PackageFamilyName": "RetroArch_test"
+      },
+      {
+        "Name": "f3a28ab5-9cd3-480a-86e5-58ecbeba4015",
+        "PackageFullName": "f3a28ab5-9cd3-480a-86e5-58ecbeba4015_2.1.8.0_x64__test",
+        "PackageFamilyName": "f3a28ab5-9cd3-480a-86e5-58ecbeba4015_test"
+      }
+    ]
+  },
+  "directories": {
+    "RetroArch_1.0.0.0_x64__test": {
+      "LocalState\\roms": {
+        "Items": []
+      },
+      "LocalState\\roms\\arcade": {
+        "Items": [
+          {
+            "Name": "1941.zip",
+            "Type": 32,
+            "FileSize": 17
+          },
+          {
+            "Name": "1942.zip",
+            "Type": 32,
+            "FileSize": 3
+          },
+          {
+            "Name": "remote-only.zip",
+            "Type": 32,
+            "FileSize": 7
+          }
+        ]
+      },
+      "LocalState\\roms\\genesis": {
+        "Items": []
+      },
+      "LocalState\\roms\\snes": {
+        "Items": []
+      }
+    },
+    "f3a28ab5-9cd3-480a-86e5-58ecbeba4015_2.1.8.0_x64__test": {
+      "LocalState": {
+        "Items": [
+          {
+            "Name": "InternalCatalog.json",
+            "Type": 32,
+            "FileSize": 711
+          }
+        ]
+      }
+    }
+  },
+  "catalog": {
+    "version": 1,
+    "contentRoot": "U:\\Users\\UserMgr0\\AppData\\Local\\Packages\\RetroArch_test\\LocalState\\roms",
+    "platforms": [
+      {
+        "id": "arcade",
+        "title": "Arcade",
+        "defaultCore": "mame2003_plus_libretro.dll"
+      },
+      {
+        "id": "genesis",
+        "title": "Genesis",
+        "defaultCore": "genesis_plus_gx_libretro.dll"
+      },
+      {
+        "id": "snes",
+        "title": "SNES",
+        "defaultCore": "snes9x_libretro.dll"
+      }
+    ],
+    "games": [
+      {
+        "id": "arcade-1941",
+        "platform": "arcade",
+        "title": "1941 (my edited title)",
+        "rom": "arcade/1941.zip",
+        "artwork": "Artwork/1941.png",
+        "notes": "User metadata is retained verbatim."
+      }
+    ]
+  }
+}

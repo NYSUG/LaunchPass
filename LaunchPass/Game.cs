@@ -127,6 +127,7 @@ namespace RetroPass
 
         public async Task<BitmapImage> GetImageThumbnailAsync()
         {
+            if (this is InternalCatalogGame catalogGame) return await catalogGame.LoadArtworkAsync();
             StorageFile ImageFile = null;
             StorageItemThumbnail thumbnail = null;
             //BitmapImage bitmapImage = null;
@@ -160,6 +161,7 @@ namespace RetroPass
 
         public async Task<BitmapImage> GetMainImageAsync()
         {
+            if (this is InternalCatalogGame catalogGame) return await catalogGame.LoadArtworkAsync();
             BitmapImage bitmapImage = null;
 
             Trace.TraceInformation("Game: GetMainImageAsync {0}", BoxFrontFilePath);
