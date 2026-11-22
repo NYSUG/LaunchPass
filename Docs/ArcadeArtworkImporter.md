@@ -114,7 +114,7 @@ The browser itself Uniform-fills/crops backgrounds, so portrait flyer background
 
 Presentation.json keeps `version:1` and merges only supported `id`, `year`, `manufacturer`, `genre` fields. Existing metadata, empty values, unknown fields and unrelated game entries remain intact. A refresh updates only fields still equal to their recorded importer-generated values. Malformed existing metadata stops the run before output writes. A no-change merge preserves the existing file bytes.
 
-**Current frontend limitation:** full title, player count, clone relation, controls, languages, orientation and other fetched fields are stored in the per-run report, not displayed by PremiumBrowserPage. Catalog titles are never rewritten. Rich metadata is under `games[].metadata`; per-asset URLs, parent origin, dimensions and hashes are under `managed_sources` and state.json. Neither adding title/players to the catalog nor changing the launcher is required.
+The standalone importer records full title, player count, clone relation, controls, languages, orientation and other fetched fields under `games[].metadata` in its report. The combined sync's `--enrich` mode can use a matched full title to replace a catalog title derived from the archive filename. PremiumBrowserPage gets the display title from the catalog. Per-asset URLs, parent origin, dimensions and hashes are under `managed_sources` and state.json.
 
 ## Reports and acceptance
 

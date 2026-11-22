@@ -1,9 +1,11 @@
 """Offline contract, HTTP and real temporary-filesystem tests for arcade_artwork."""
 import copy
+import gzip
 import io
 import json
 import os
 from pathlib import Path
+import ssl
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -183,9 +185,14 @@ class ImportTests(unittest.TestCase):
             self.run_import(mapping={'missing-id': '1941'})
 
     def test_non_arcade_and_nonarchive_are_skipped_or_reported(self):
-        doc = sample(); doc['games'][0]['rom'] = '1941.chd'
-        self.catalog.write_bytes(art.json_bytes(doc))
-        self.assertEqual(self.run_import()['games'][0]['status'], 'error')
+        doc = sample()
+        for rom in ('1941.chd', 'arcade/socbrawl/031-s1.bin'):
+            doc['games'][0]['rom'] = rom
+            self.catalog.write_bytes(art.json_bytes(doc))
+            item = self.run_import()['games'][0]
+            self.assertEqual(item['status'], 'skipped-unsupported-rom')
+            self.assertEqual(item['assets'], {})
+        self.assertEqual(self.client.calls, [])
         self.assertEqual(self.run_import(platforms=('other',))['games'][0]['status'], 'skipped-platform')
 
     def test_malformed_existing_presentation_stops_before_writes(self):
@@ -296,6 +303,46 @@ class HttpTests(unittest.TestCase):
         opener = Opener(self.envelope([remote()]))
         self.client(opener).api('query_mame', '1941')
         self.assertEqual(opener.requests[0].full_url, art.API + '?ajax=query_mame&game_name=1941')
+
+    def test_api_accepts_gzip_json_with_or_without_encoding_header(self):
+        data = gzip.compress(self.envelope([remote()]).getvalue())
+        for headers in ({'Content-Encoding': 'gzip'}, {}):
+            with self.subTest(headers=headers):
+                result = self.client(Opener(Response(data, headers))).api('query_mame', '1941')
+                self.assertEqual(result['result'][0]['game_name'], '1941')
+
+    def test_gzip_response_rejects_truncation_and_expansion_past_limit(self):
+        data = gzip.compress(b'x' * 256)
+        for body, limit, message in ((data[:-4], 256, 'Invalid gzip'), (data, 64, 'Decompressed response exceeds')):
+            with self.subTest(message=message), self.assertRaisesRegex(art.ImportFailure, message):
+                self.client(Opener(Response(body)))._http(art.API, limit)
+
+    def test_certificate_failure_aborts_import_at_first_request(self):
+        doc = sample()
+        doc['games'].append(dict(doc['games'][0], id='arcade-1942', rom='1942.zip'))
+        self.catalog.write_bytes(art.json_bytes(doc))
+        opener = Opener(URLError(ssl.SSLCertVerificationError('certificate verify failed')))
+        with self.assertRaisesRegex(art.ProviderCertificateError, r'adb\.arcadeitalia\.net.*SSL_CERT_FILE'):
+            art.import_catalog(self.catalog, self.files.root, apply=True,
+                               client_factory=lambda files, **kwargs: art.Client(files, opener=opener, **kwargs))
+        self.assertEqual(len(opener.requests), 1)
+        self.assertFalse((self.files.root / 'Presentation.json').exists())
+        self.assertFalse((self.files.root / 'ArcadeItalia/import.lock').exists())
+
+    def test_macos_ca_fallback_respects_explicit_configuration(self):
+        bundle = self.catalog.parent / 'macos.pem'
+        bundle.touch()
+        paths = ssl.DefaultVerifyPaths(None, None, 'SSL_CERT_FILE', '/missing.pem', 'SSL_CERT_DIR', '/missing')
+        with patch.object(art, 'MACOS_CA_BUNDLE', bundle), patch.object(art.sys, 'platform', 'darwin'), \
+                patch.object(art.ssl, 'get_default_verify_paths', return_value=paths), \
+                patch.object(art.ssl, 'create_default_context') as context, patch.object(art, 'build_opener'), \
+                patch.dict(os.environ, {}, clear=True):
+            art.provider_opener()
+            context.assert_called_once_with(cafile=str(bundle))
+            context.reset_mock()
+            with patch.dict(os.environ, {'SSL_CERT_FILE': '/custom.pem'}):
+                art.provider_opener()
+            context.assert_not_called()
 
     def test_metadata_cached_and_offline_reused_without_requests(self):
         self.client(Opener(self.envelope([remote()]))).api('query_mame', '1941')

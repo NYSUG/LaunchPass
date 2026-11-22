@@ -1,11 +1,14 @@
 """Entirely mocked Portal transport; these tests never contact an Xbox."""
 import copy
+import errno
 from email.message import Message
 from email.parser import BytesParser
 from email.policy import default
+from http.client import RemoteDisconnected
 import io
 import json
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -13,6 +16,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, urlsplit
 from urllib.request import BaseHandler
 from urllib.response import addinfourl
+from zipfile import ZipFile
 
 import arcade_sync as sync
 
@@ -37,6 +41,7 @@ class MockXbox(BaseHandler):
     handler_order = 100
     def __init__(self):
         self.calls, self.posts = [], []
+        self.upload_names = []
         self.packages = {'InstalledPackages': [
             {'PackageFullName': RA, 'PackageFamilyName': FAMILY, 'Name': 'RetroArch'},
             {'PackageFullName': LP, 'PackageFamilyName': sync.LAUNCHPASS_IDENTITY + '_test', 'Name': 'LaunchPass'}]}
@@ -89,7 +94,6 @@ class MockXbox(BaseHandler):
                 self.posts.append(request)
                 if self.post_status:
                     error(self.post_status)
-                assert query['extract'] == 'false'
                 assert request.get_header('X-csrf-token') == 'synthetic-csrf'
                 if self.interrupt:
                     next(iter(request.data))
@@ -101,7 +105,17 @@ class MockXbox(BaseHandler):
                 parts = list(message.iter_parts())
                 assert len(parts) == 1 and parts[0].get_param('name', header='content-disposition') == 'file'
                 name = parts[0].get_filename()
-                files[name] = b'wrong size' if self.bad_size else parts[0].get_payload(decode=True)
+                self.upload_names.append(name)
+                payload = parts[0].get_payload(decode=True)
+                if query['extract'] == 'true':
+                    assert key == (LP, 'LocalState')
+                    with ZipFile(io.BytesIO(payload)) as bundle:
+                        for member in bundle.namelist():
+                            directory, filename = member.replace('/', '\\').rsplit('\\', 1)
+                            self.files.setdefault((LP, 'LocalState\\' + directory), {})[filename] = bundle.read(member)
+                else:
+                    assert query['extract'] == 'false'
+                    files[name] = b'wrong size' if self.bad_size else payload
                 if self.remote_edit_after_rom and key[0] == RA:
                     edited = seed()
                     edited['games'][0]['title'] = 'Edited during transfer'
@@ -178,9 +192,18 @@ class SyncTests(unittest.TestCase):
         self.assertEqual(self.plan().catalog['games'][0]['customOnlyOnXbox'], ['keep', 1])
         remote['games'][0]['title'] = 'A conflicting manual edit'
         self.device.files[LP, 'LocalState'][sync.CATALOG] = sync.encode_catalog(remote)
-        with self.assertRaisesRegex(sync.SyncError, 'Conflicting manually edited'):
+        with self.assertRaisesRegex(sync.SyncError, "Conflicting manually edited metadata in game arcade-1941, field 'title'"):
             self.plan()
         self.assertEqual(self.device.posts, [])
+
+    def test_platform_conflict_names_field_without_printing_values(self):
+        local = seed()
+        remote = copy.deepcopy(local)
+        remote['platforms'][0]['title'] = 'Private title'
+        with self.assertRaises(sync.SyncError) as error:
+            sync.merge_catalogs(local, remote)
+        self.assertIn("platform arcade, field 'title'", str(error.exception))
+        self.assertNotIn('Private title', str(error.exception))
 
     def test_preserve_remote_only_game_and_locally_absent_game(self):
         remote = seed()
@@ -241,10 +264,26 @@ class SyncTests(unittest.TestCase):
     def test_interrupted_transfer_does_not_publish_catalog_or_retry(self):
         plan = self.plan()
         self.device.interrupt = True
-        with self.assertRaisesRegex(sync.SyncError, 'interrupted'):
+        with self.assertRaisesRegex(sync.SyncError, 'POST .* interrupted.*State may be partial'):
             sync.apply_plan(self.portal, plan, self.options)
         self.assertEqual(len(self.device.posts), 1)
         self.assertNotIn(sync.CATALOG, self.device.files[LP, 'LocalState'])
+
+    def test_bootstrap_disconnect_reports_operation_without_secret(self):
+        with patch.object(self.portal.opener, 'open', side_effect=RemoteDisconnected('synthetic secret')):
+            with self.assertRaises(sync.SyncError) as error:
+                self.plan()
+        self.assertEqual(str(error.exception),
+                         'Portal GET /api/os/info: server closed the connection without an HTTP response.')
+        self.assertEqual(self.device.posts, [])
+
+    def test_bootstrap_os_error_reports_only_type_and_errno(self):
+        failure = URLError(OSError(errno.EHOSTUNREACH, 'synthetic secret'))
+        with patch.object(self.portal.opener, 'open', side_effect=failure):
+            with self.assertRaises(sync.SyncError) as error:
+                self.plan()
+        self.assertEqual(str(error.exception),
+                         f'Portal GET /api/os/info: transfer/connection interrupted (OSError), errno {errno.EHOSTUNREACH}.')
 
     def test_post_upload_size_failure_does_not_publish_catalog(self):
         plan = self.plan()
@@ -283,6 +322,25 @@ class SyncTests(unittest.TestCase):
             else: options['seed']['contentRoot'] = ROOT.replace('RetroArch_test', 'Wrong_test')
             with self.subTest(alter=alter), self.assertRaises(sync.SyncError):
                 sync.build_plan(self.portal, **options)
+        self.assertEqual(self.device.posts, [])
+
+    def test_launchpass_identity_accepts_case_variants_but_rejects_other_family(self):
+        package = self.device.packages['InstalledPackages'][1]
+        package['PackageFamilyName'] = package['PackageFamilyName'].upper()
+        self.assertEqual(self.plan().report['mode'], 'dry-run')
+        package['PackageFamilyName'] = 'Other_test'
+        with self.assertRaisesRegex(sync.SyncError, "PackageFamilyName 'Other_test'"):
+            self.plan()
+        self.assertEqual(self.device.posts, [])
+
+    def test_bare_portal_package_names_resolve_from_versioned_full_names(self):
+        retroarch, launchpass = self.device.packages['InstalledPackages']
+        retroarch['PackageFamilyName'] = 'RetroArch'
+        launchpass['PackageFamilyName'] = sync.LAUNCHPASS_IDENTITY
+        self.assertEqual(self.plan().report['mode'], 'dry-run')
+        launchpass['PackageFamilyName'] = 'Other'
+        with self.assertRaisesRegex(sync.SyncError, 'cannot be resolved from PackageFullName'):
+            self.plan()
         self.assertEqual(self.device.posts, [])
 
     def test_malformed_listing_fails_closed(self):
@@ -338,6 +396,27 @@ class SyncTests(unittest.TestCase):
         self.assertEqual(result[0], self.options['seed']['games'][0])
         self.assertEqual(len(result), 2)
 
+    def test_xbox_paths_accept_relative_and_absolute_roms(self):
+        for rom in ('arcade/1941.zip', r'arcade\1941.zip', ROOT + r'\arcade\1941.zip'):
+            with self.subTest(rom=rom):
+                document = seed()
+                document['games'][0]['rom'] = rom
+                self.assertEqual(sync.validate_catalog(document), document)
+                self.assertEqual(sync.rom_path(ROOT, rom), (ROOT + r'\arcade\1941.zip').casefold())
+
+    def test_traversal_and_dot_still_rejected_in_xbox_paths(self):
+        for rom in ('.', '../outside.zip', r'arcade\..\outside.zip', ROOT + r'\..\outside.zip'):
+            with self.subTest(rom=rom):
+                document = seed()
+                document['games'][0]['rom'] = rom
+                with self.assertRaisesRegex(sync.SyncError, 'Unsafe Windows path'):
+                    sync.validate_catalog(document)
+
+    def test_platform_folder_rejects_traversal_and_absolute_paths(self):
+        for folder in ('..', '../outside', r'arcade\..', './arcade', '/outside', r'U:\outside'):
+            with self.subTest(folder=folder), self.assertRaisesRegex(sync.SyncError, 'Unsafe Windows path'):
+                sync.scan_library(self.root, {'arcade': folder}, {'.zip'})
+
     def test_generated_titles_metadata_and_ids_survive_regeneration(self):
         first = self.plan().catalog
         generated = first['games'][1]
@@ -354,6 +433,145 @@ class SyncTests(unittest.TestCase):
             sync.apply_plan(self.portal, plan, self.options)
         self.assertEqual(len(self.device.posts), 1)
         self.assertNotIn(sync.CATALOG, self.device.files[LP, 'LocalState'])
+
+    def test_post_500_identifies_rom_or_catalog_upload(self):
+        self.device.post_status = 500
+        for catalog_only in (False, True):
+            with self.subTest(catalog_only=catalog_only):
+                if catalog_only:
+                    for file in (self.root / 'arcade').iterdir():
+                        self.device.files[RA, DIRECTORY][file.name] = file.read_bytes()
+                plan = self.plan()
+                with self.assertRaises(sync.DiagnosticError) as error:
+                    sync.apply_plan(self.portal, plan, self.options)
+                operation = (r'Uploading LaunchPass LocalState\InternalCatalog.json' if catalog_only
+                             else "Uploading ROM 'arcade/1941.zip'")
+                self.assertEqual(str(error.exception), operation + ': Portal HTTP status 500')
+        self.assertEqual(len(self.device.posts), 2)
+
+    def test_enrichment_dry_run_and_apply_preserve_existing_xbox_metadata(self):
+        stage = self.root.resolve() / 'stage'
+        presentation = {'version': 1, 'games': [{'id': 'arcade-1941', 'year': 'custom'}]}
+        self.device.files[LP, 'LocalState'][sync.PRESENTATION] = sync.encode_catalog(presentation)
+        directory = (LP, r'LocalState\Artwork\games\arcade-1941')
+        self.device.files[directory] = {'logo.jpg': b'custom artwork'}
+
+        def importer(catalog, output, *, apply, progress):
+            self.assertEqual(sync.read_json(catalog), plan.catalog)
+            self.assertEqual(output, stage)
+            progress(1, 2, 'arcade-1941', 0)
+            if apply:
+                asset_dir = output / 'Artwork/games/arcade-1941'
+                asset_dir.mkdir(parents=True)
+                (asset_dir / 'background.png').write_bytes(b'staged image')
+                (asset_dir / 'logo.png').write_bytes(b'new logo')
+            return {'games': [{'id': 'arcade-1941', 'assets': {
+                        role: {'status': 'written' if apply else 'would-download'} for role in ('logo', 'background')
+                    }}],
+                    'presentation': {'version': 1, 'games': [
+                        {'id': 'arcade-1941', 'year': '1941', 'manufacturer': 'Capcom'}]}}
+
+        plan = self.plan()
+        stderr = io.StringIO()
+        with patch('arcade_artwork.import_catalog', side_effect=importer), patch('sys.stderr', stderr):
+            preview, _ = sync.stage_enrichment(self.portal, LP, plan.catalog, stage, False)
+            self.assertFalse(stage.exists())
+            self.assertEqual(self.device.posts, [])
+            self.assertEqual(preview['xbox']['artwork_uploads'], ['Artwork/games/arcade-1941/background.png'])
+            # Mock the dependency probe, since this test supplies already-staged bytes.
+            with patch.dict('sys.modules', {'PIL': type('PIL', (), {'Image': object()})}):
+                report, publish = sync.stage_enrichment(self.portal, LP, plan.catalog, stage, True)
+            self.assertEqual(report['xbox'], preview['xbox'])
+            sync.apply_plan(self.portal, plan, self.options, publish)
+        self.assertEqual(self.device.files[directory], {'logo.jpg': b'custom artwork', 'background.png': b'staged image'})
+        presentation['games'][0]['manufacturer'] = 'Capcom'
+        self.assertEqual(sync.json_load(self.device.files[LP, 'LocalState'][sync.PRESENTATION]), presentation)
+        self.assertEqual(self.device.upload_names[:2], ['1941.zip', '1942.zip'])
+        self.assertTrue(self.device.upload_names[2].startswith('LaunchPassArtwork-'))
+        self.assertEqual(self.device.upload_names[3:], [sync.PRESENTATION, sync.CATALOG])
+        self.assertIn('checking game 1/2 (arcade-1941)', stderr.getvalue())
+        self.assertIn('Checking Xbox for 2 artwork paths', stderr.getvalue())
+
+    def test_enrichment_can_run_importer_in_separate_python(self):
+        catalog = seed()
+        catalog['platforms'][0]['id'] = 'snes'
+        catalog['games'][0]['platform'] = 'snes'
+        stage = self.root.resolve() / 'stage'
+        with patch('sys.stderr', io.StringIO()):
+            report, _ = sync.stage_enrichment(self.portal, LP, catalog, stage, False, sys.executable)
+        self.assertEqual(report['games'][0]['status'], 'skipped-platform')
+        self.assertEqual(report['requests'], 0)
+        self.assertEqual(self.device.posts, [])
+        self.assertFalse(stage.exists())
+
+    def test_enrichment_publishes_full_titles_only_for_archive_stems_and_can_resync(self):
+        for file in (self.root / 'arcade').iterdir():
+            self.device.files[RA, DIRECTORY][file.name] = file.read_bytes()
+        original = self.plan().catalog
+        self.options.update(seed=original, prefer_named_arcade_games=True)
+        self.device.files[LP, 'LocalState'][sync.CATALOG] = sync.encode_catalog(original)
+        plan = self.plan()
+        self.assertEqual(plan.report['catalog']['action'], 'unchanged')
+        first, second = original['games']
+        enrichment = {'games': [
+            {'id': first['id'], 'status': 'matched', 'metadata': {'title': 'First game'}},
+            {'id': second['id'], 'status': 'matched', 'metadata': {'title': '1942: Full title'}},
+        ]}
+        preview = sync.build_publication_report(plan, enrichment)
+        self.assertEqual(preview['catalog']['enriched_title_game_ids'], [second['id']])
+        self.assertEqual(preview['catalog']['action'], 'update')
+        self.assertEqual(plan.catalog, original)
+        self.assertEqual(self.device.posts, [])
+        sync.apply_plan(self.portal, plan, self.options, publication_report=preview)
+        published = sync.json_load(self.device.files[LP, 'LocalState'][sync.CATALOG])
+        self.assertEqual(published['games'], [first, dict(second, title='1942: Full title')])
+        self.assertEqual(self.device.upload_names, [sync.CATALOG])
+        self.assertEqual(self.plan().report['catalog']['action'], 'unchanged')
+        self.options['seed'] = copy.deepcopy(original)
+        self.options['seed']['games'][1]['title'] = 'A different human title'
+        with self.assertRaisesRegex(sync.SyncError, "field 'title'"):
+            self.plan()
+
+    def test_excluding_bios_removes_catalog_entry_but_still_uploads_archive(self):
+        existing = self.plan().catalog
+        self.device.files[LP, 'LocalState'][sync.CATALOG] = sync.encode_catalog(existing)
+        plan = self.plan()
+        game, bios = existing['games']
+        enrichment = {'games': [
+            {'id': game['id'], 'status': 'matched', 'metadata': {'genre': 'System / BIOS Test'}},
+            {'id': bios['id'], 'status': 'matched', 'metadata': {'genre': 'System / BIOS'}},
+        ]}
+        report = sync.build_publication_report(plan, enrichment, exclude_bios=True)
+        self.assertEqual(report['catalog']['excluded_bios'], [{'id': bios['id'], 'rom': bios['rom']}])
+        self.assertEqual(report['generated_catalog']['games'], [game])
+        self.assertEqual(report['catalog']['action'], 'update')
+        self.assertEqual(report['uploads'], plan.report['uploads'])
+        self.assertEqual(self.device.posts, [])
+        sync.apply_plan(self.portal, plan, self.options, publication_report=report)
+        self.assertEqual(self.device.files[RA, DIRECTORY]['1942.zip'], (self.root / 'arcade/1942.zip').read_bytes())
+        self.assertEqual(sync.json_load(self.device.files[LP, 'LocalState'][sync.CATALOG])['games'], [game])
+
+    def test_loose_component_cleanup_preserves_archives_and_custom_entries(self):
+        original = self.plan().catalog
+        for rom, title in [('arcade/1942/chip.bin', 'chip'), ('arcade/1942/custom.bin', 'Custom title'),
+                           ('arcade/missing/chip.bin', 'chip')]:
+            game_id = sync.generated_game_id('arcade', sync.rom_path(ROOT, rom))
+            original['games'].append({'id': game_id, 'platform': 'arcade', 'rom': rom, 'title': title})
+        removed = original['games'][2]
+        self.options['seed'] = original
+        self.device.files[LP, 'LocalState'][sync.CATALOG] = sync.encode_catalog(original)
+        for file in (self.root / 'arcade').iterdir():
+            self.device.files[RA, DIRECTORY][file.name] = file.read_bytes()
+        self.device.files[RA, r'LocalState\roms\arcade\1942'] = {'chip.bin': b'keep the ROM file'}
+        plan = self.plan()
+        report = sync.build_publication_report(plan, clean_loose_components=True)
+        self.assertEqual(report['catalog']['excluded_loose_arcade_components'],
+                         [{'id': removed['id'], 'rom': removed['rom']}])
+        self.assertEqual(report['generated_catalog']['games'], original['games'][:2] + original['games'][3:])
+        self.assertEqual(self.device.posts, [])
+        sync.apply_plan(self.portal, plan, self.options, publication_report=report)
+        self.assertEqual(self.device.upload_names, [sync.CATALOG])
+        self.assertEqual(self.device.files[RA, r'LocalState\roms\arcade\1942']['chip.bin'], b'keep the ROM file')
 
     def test_missing_csrf_cookie_refuses_post_before_transport(self):
         self.portal.cookies.clear()
@@ -384,6 +602,24 @@ class SyncTests(unittest.TestCase):
             self.assertEqual(sync.main(args), 1)
             portal.assert_not_called()
         self.assertIn('forbidden', stderr.getvalue())
+
+    def test_cli_flat_rom_root_writes_catalog_with_xbox_platform_prefix(self):
+        seed_path = self.root / 'seed.json'
+        seed_path.write_bytes(sync.encode_catalog(seed()))
+        output_path = self.root / 'InternalCatalog.json'
+        args = ['--rom-root', str(self.root / 'arcade'), '--platform-dir', 'arcade=.',
+                '--catalog', str(seed_path), '--url', 'https://xbox.invalid',
+                '--retroarch-package-full-name', RA, '--launchpass-package-full-name', LP,
+                '--output', str(output_path)]
+        stdout = io.StringIO()
+        with patch.dict(sync.os.environ, {'XBOX_USER': 'synthetic-user', 'XBOX_PASS': 'synthetic-pass'}), \
+                patch.object(sync, 'SyncPortal', return_value=self.portal), patch('sys.stdout', stdout):
+            self.assertEqual(sync.main(args), 0)
+        self.assertEqual(json.loads(stdout.getvalue())['scanned_roms'], 2)
+        document = sync.read_json(output_path)
+        self.assertEqual(document['contentRoot'], ROOT)
+        self.assertEqual({game['rom'] for game in document['games']}, {'arcade/1941.zip', 'arcade/1942.zip'})
+        self.assertEqual(self.device.posts, [])
 
     def test_real_example_schema_and_invalid_manifest_cases(self):
         example = sync.read_json(Path(__file__).parents[1] / 'Docs/InternalCatalog.example.json')

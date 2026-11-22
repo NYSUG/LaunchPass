@@ -40,6 +40,8 @@ Default extensions are `.zip,.7z,.md,.gen,.smd,.sfc,.smc,.nes,.gb,.gbc,.gba,.chd
 
 ## Offline example (no Xbox or credentials)
 
+If the arcade ROMs are directly under `--rom-root`, pass `--platform-dir arcade=.`. The generated catalog still uses Xbox-relative paths such as `arcade/1941.zip`.
+
 From the repository root, choose a **new** temporary folder:
 
 ```sh
@@ -91,6 +93,28 @@ Omitting `--dry-run` has the same effect. TLS certificate verification is on by 
 Basic-auth credentials are read through hidden prompts or the already exported `XBOX_USER` / `XBOX_PASS` environment variables used by the existing uploader. Cookie sessions are supported with `--auth cookie` and a hidden Cookie-header-value prompt. Never put credentials in a URL, command argument, shell history, seed, snapshot, saved config or repository file. No cookie jar or credentials file is created. Missing secure terminal input is an error; secrets are never echoed as a fallback. Authentication headers, cookies, CSRF tokens and server error bodies are omitted from reports and errors.
 
 The new transport reuses `xbox_diagnostics.Portal` for origin validation, TLS, credentials, memory-only cookies and redirect isolation. Inspection of `/Users/timothyjohnson/Roms/Mame/upload.sh` confirmed **GET `/api/os/info`** to obtain cookies (the diagnostics client's bootstrap uses GET `/`), followed by multipart POST to `/api/filesystem/apps/file` with `extract=false` and the CSRF cookie mirrored to `X-CSRF-Token`. This tool follows that uploader flow without sourcing or executing the shell script. Catalog reads use the [documented file GET endpoint](https://learn.microsoft.com/en-us/windows/uwp/debug-test-perf/device-portal-api-core#files) with `filename=InternalCatalog.json`, `knownfolderid=LocalAppData`, the installed package full name and `path=\LocalState`.
+
+## Arcade metadata and artwork
+
+Add these flags to the live sync command:
+
+```sh
+--enrich --enrichment-dir "$HOME/LaunchPass-artwork"
+```
+
+With `--dry-run`, the existing [ArcadeItalia importer](../../Docs/ArcadeArtworkImporter.md) looks up ROM short names and reports matches, candidate artwork, and Xbox uploads under `enrichment`. It downloads no images and makes no Xbox writes. With `--apply`, install Pillow for the Python interpreter running the sync using `tools/arcade-artwork-requirements.txt`. Keep the same staging directory across runs to reuse downloaded images, cached responses, and source reports. Use the resolved path if the directory is under a macOS symlink such as `/tmp`.
+
+The apply stages enrichment before Xbox writes, then sends required ROMs, missing artwork, and changed `Presentation.json` before publishing a changed catalog. The generated artwork bundle uses Device Portal archive extraction in LaunchPass LocalState. Existing artwork variants and existing Xbox presentation values take precedence. Year, manufacturer, and genre go to `Presentation.json`. On an exact ArcadeItalia match, the sync replaces a game title that equals its ZIP or 7z filename stem with the full game title. Dry-run lists those changes in `catalog.enriched_title_game_ids`. Keep using `--enrich` with the original seed so that a published title can supersede the seed's filename fallback. Additional fields and artwork attribution stay in the local importer reports. Review missing matches and failed assets in the enrichment summary.
+
+If you need one Python interpreter for the Xbox connection and another for Pillow, add `--enrichment-python .venv/bin/python3` from the repository root. The interpreter running `arcade_sync.py` handles Device Portal and the specified interpreter runs the local importer.
+
+If a macOS Python installation lacks a CA bundle, prefix the command with `SSL_CERT_FILE=/etc/ssl/cert.pem` to use the Mac's PEM bundle for the ArcadeItalia connection. The Xbox TLS flags apply only to Device Portal.
+
+For an archive-only Arcade library, set `--extensions .zip,.7z` to exclude loose components from new scan results. The enrichment importer skips unsupported ROM paths. The extension filter does not delete existing seed or Xbox catalog entries.
+
+To clean up entries from an earlier scan, add `--clean-loose-arcade-components` and review `catalog.excluded_loose_arcade_components` in dry-run. The cleanup removes unedited, generated Arcade/MAME `.bin` entries whose enclosing folder has a matching scanned ZIP or 7z archive. It applies to the generated launcher catalog, while ROM transfers and remote files follow the usual sync behavior.
+
+Add `--exclude-bios` with `--enrich` to omit exact ArcadeItalia matches tagged `System / BIOS` from the generated and Xbox launcher catalogs. Check `catalog.excluded_bios` in dry-run. BIOS archives still sync to RetroArch normally so games can use them. Keep the flag on future syncs to continue excluding them.
 
 ## Core selection and metadata protection
 

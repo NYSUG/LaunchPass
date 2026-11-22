@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import gzip
 import hashlib
 import io
 import json
@@ -16,6 +17,7 @@ import ntpath
 import os
 from pathlib import Path
 import re
+import ssl
 import sys
 import tempfile
 import time
@@ -24,15 +26,17 @@ from email.utils import parsedate_to_datetime
 from http.client import HTTPException
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urljoin, urlsplit
-from urllib.request import Request, build_opener, HTTPRedirectHandler
+from urllib.request import Request, build_opener, HTTPRedirectHandler, HTTPSHandler
 import uuid
 import warnings
+import zlib
 
 API = 'https://adb.arcadeitalia.net/service_scraper.php'
 CREDIT = 'Arcade Database by motoschifo — https://adb.arcadeitalia.net'
 RIGHTS = 'Artwork, names and trademarks belong to their respective copyright/trademark holders. MAME is a registered trademark of Nicola Salmoria.'
 MAX_JSON = 8 * 1024 * 1024
 MAX_IMAGE = 30 * 1024 * 1024
+MACOS_CA_BUNDLE = Path('/etc/ssl/cert.pem')
 ID = re.compile(r'[A-Za-z0-9_-]+\Z')
 ROM = re.compile(r'[a-z0-9_]+\Z')
 DEVICE = re.compile(r'(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])\Z', re.I)
@@ -50,6 +54,14 @@ FIELDS = ('title', 'short_title', 'year', 'manufacturer', 'genre', 'players',
 
 class ImportFailure(Exception):
     pass
+
+
+class UnsupportedRom(ImportFailure):
+    pass
+
+
+class ProviderCertificateError(Exception):
+    """Fatal trust failure that applies to the run rather than an individual ROM."""
 
 
 class ServiceStopped(ImportFailure):
@@ -91,7 +103,7 @@ def shortname(rom):
     name, ext = ntpath.splitext(ntpath.basename(rom))
     name = name.lower()
     if ext.lower() not in ('.zip', '.7z') or not ROM.fullmatch(name):
-        raise ImportFailure('Not a MAME ZIP/7z ROM short name: ' + rom)
+        raise UnsupportedRom('Not a MAME ZIP/7z ROM short name: ' + rom)
     return name
 
 
@@ -207,12 +219,22 @@ def allowed_url(url):
         raise ImportFailure('Refusing non-ArcadeItalia HTTPS URL: ' + url)
 
 
+def provider_opener():
+    paths = ssl.get_default_verify_paths()
+    if (sys.platform == 'darwin' and not paths.cafile and not paths.capath
+            and paths.openssl_cafile_env not in os.environ and paths.openssl_capath_env not in os.environ
+            and MACOS_CA_BUNDLE.is_file()):
+        context = ssl.create_default_context(cafile=str(MACOS_CA_BUNDLE))
+        return build_opener(NoRedirect(), HTTPSHandler(context=context))
+    return build_opener(NoRedirect())
+
+
 class Client:
     def __init__(self, files, interval=1.0, ttl_days=30, refresh=False, offline=False,
                  opener=None, sleep=time.sleep, clock=time.monotonic, now=time.time):
         self.files, self.interval = files, max(1.0, interval)
         self.ttl, self.refresh, self.offline = ttl_days * 86400, refresh, offline
-        self.opener = opener or build_opener(NoRedirect())
+        self.opener = opener if opener is not None else provider_opener()
         self.sleep, self.clock, self.now = sleep, clock, now
         self.last = None
         self.stopped = None
@@ -247,6 +269,15 @@ class Client:
                     data = response.read(limit + 1)
                     if len(data) > limit:
                         raise ImportFailure('Response exceeds size/quota limit')
+                    encoding = response.headers.get('Content-Encoding', '').strip().lower()
+                    if encoding == 'gzip' or data.startswith(b'\x1f\x8b'):
+                        try:
+                            with gzip.GzipFile(fileobj=io.BytesIO(data)) as compressed:
+                                data = compressed.read(limit + 1)
+                        except (OSError, EOFError, zlib.error) as exc:
+                            raise ImportFailure('Invalid gzip response from ArcadeItalia') from exc
+                        if len(data) > limit:
+                            raise ImportFailure('Decompressed response exceeds size limit')
                     return data
             except HTTPError as exc:
                 if exc.code in (301, 302, 303, 307, 308):
@@ -278,6 +309,13 @@ class Client:
                     retries += 1; self.sleep(delay); continue
                 raise ImportFailure('Provider HTTP ' + str(code)) from None
             except (URLError, TimeoutError, OSError, HTTPException) as exc:
+                cause = exc.reason if isinstance(exc, URLError) else exc
+                if isinstance(cause, ssl.SSLCertVerificationError):
+                    raise ProviderCertificateError(
+                        f'ArcadeItalia TLS certificate verification failed for {urlsplit(url).hostname}. '
+                        'Configure a trusted CA bundle '
+                        'for the artwork Python with SSL_CERT_FILE.'
+                    ) from None
                 raise ImportFailure('Network request failed: ' + str(exc)) from exc
 
     def api(self, function, name=None, cache=True):
@@ -429,7 +467,8 @@ def existing_role(files, directory, role):
 
 
 def import_catalog(catalog, output, *, apply=False, offline=False, refresh=False,
-                   parent_artwork=False, platforms=('arcade', 'mame'), mapping=None, client_factory=Client):
+                   parent_artwork=False, platforms=('arcade', 'mame'), mapping=None, client_factory=Client,
+                   progress=None):
     catalog = Path(catalog)
     doc, original_hash = catalog_read(catalog)
     files = LocalFiles(output, catalog, apply)
@@ -463,11 +502,16 @@ def import_catalog(catalog, output, *, apply=False, offline=False, refresh=False
         except FileExistsError as exc:
             raise ImportFailure('Importer lock exists; another import or an interrupted run needs review') from exc
     try:
+        total = sum(game['platform'].casefold() in allowed for game in doc['games'])
+        active = 0
         for game in doc['games']:
             item = {'id': game['id'], 'catalog_title': game['title'], 'assets': {}, 'warnings': []}
             report['games'].append(item)
             if game['platform'].casefold() not in allowed:
                 item['status'] = 'skipped-platform'; continue
+            active += 1
+            if progress is not None:
+                progress(active, total, game['id'], client.requests)
             try:
                 name = shortname(game['rom'])
                 item['rom'] = name
@@ -556,6 +600,8 @@ def import_catalog(catalog, output, *, apply=False, offline=False, refresh=False
                         asset['status'] = 'failed'
                     if errors:
                         asset['errors'] = errors
+            except UnsupportedRom as exc:
+                item['status'] = 'skipped-unsupported-rom'; item['warnings'].append(str(exc))
             except ServiceStopped as exc:
                 item['status'] = 'service-stopped'; item['warnings'].append(str(exc))
             except (ImportFailure, OSError) as exc:
@@ -567,7 +613,7 @@ def import_catalog(catalog, output, *, apply=False, offline=False, refresh=False
         for item in report['games']:
             status = item['status']
             summary['games'][status] = summary['games'].get(status, 0) + 1
-            if status != 'skipped-platform':
+            if status not in ('skipped-platform', 'skipped-unsupported-rom'):
                 for role in ROLES:
                     item['assets'].setdefault(role, {'status': 'not-processed'})
             for asset in item['assets'].values():
@@ -592,6 +638,20 @@ def import_catalog(catalog, output, *, apply=False, offline=False, refresh=False
             os.close(lock); files.path('ArcadeItalia/import.lock').unlink()
 
 
+def progress_reporter():
+    last = None
+
+    def report(index, total, game, requests):
+        nonlocal last
+        now = time.monotonic()
+        if last is None or now - last >= 10 or index == total:
+            print(f'ArcadeItalia: checking game {index}/{total} ({game}), {requests} online requests so far.',
+                  file=sys.stderr, flush=True)
+            last = now
+
+    return report
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('catalog', type=Path)
@@ -603,6 +663,7 @@ def main(argv=None):
     parser.add_argument('--platform', action='append', help='Exact arcade platform ID; repeatable; defaults arcade,mame')
     parser.add_argument('--mapping', type=Path, help='Explicit JSON game-ID -> ROM short-name overrides; no fuzzy auto-match')
     parser.add_argument('--interval', type=float, default=1.0, help='Seconds between requests; minimum 1')
+    parser.add_argument('--progress', action='store_true', help='Report progress to stderr during import')
     args = parser.parse_args(argv)
     try:
         if not 1 <= args.interval <= 60:
@@ -618,14 +679,15 @@ def main(argv=None):
         report = import_catalog(args.catalog, args.output, apply=args.apply, offline=args.offline,
                                 refresh=args.refresh, parent_artwork=args.parent_artwork,
                                 platforms=args.platform or ('arcade', 'mame'), mapping=mapping,
-                                client_factory=lambda files, **kw: Client(files, interval=args.interval, **kw))
+                                client_factory=lambda files, **kw: Client(files, interval=args.interval, **kw),
+                                progress=progress_reporter() if args.progress else None)
         print(json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False))
-        for game in report['games']:
+        for game in report['games'] if not args.progress else ():
             roles = ', '.join(role + '=' + game['assets'].get(role, {}).get('status', 'n/a') for role in ('logo', 'background', 'screenshot'))
             print(game['id'] + ': ' + game['status'] + '; ' + roles, file=sys.stderr)
         failed = any(game['status'] in ('error', 'service-stopped', 'not-found', 'ambiguous') or any(asset.get('status') == 'failed' for asset in game['assets'].values()) for game in report['games'])
         return 2 if failed else 0
-    except (ImportFailure, OSError) as exc:
+    except (ImportFailure, ProviderCertificateError, OSError) as exc:
         print('ERROR: ' + str(exc), file=sys.stderr); return 1
 
 
