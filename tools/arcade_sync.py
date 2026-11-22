@@ -667,16 +667,20 @@ def catalog_only_plan(seed, root, xbox_root, platform='arcade', folder='.', exte
     return report
 
 
-def upload_catalog_only(portal, catalog, package, identity, backup=None):
-    """Only LocalState/InternalCatalog.json can be POSTed by this branch."""
-    validate_catalog(catalog)
-    data = encode_catalog(catalog)
-    require(len(data) <= MAX_CATALOG_BYTES, 'Catalog exceeds 8 MiB.')
+def verify_launchpass_package(portal, package, identity):
     portal.bootstrap()
     installed_package = installed(portal.get_json(PACKAGES), package, '--launchpass-package-full-name')
     require(installed_package['PackageFamilyName'].casefold().startswith(identity.casefold() + '_') and
             installed_package['PackageFullName'].casefold().startswith(identity.casefold() + '_'),
             'LaunchPass package identity mismatch.')
+
+
+def upload_catalog_only(portal, catalog, package, identity, backup=None):
+    """Only LocalState/InternalCatalog.json can be POSTed by this branch."""
+    validate_catalog(catalog)
+    data = encode_catalog(catalog)
+    require(len(data) <= MAX_CATALOG_BYTES, 'Catalog exceeds 8 MiB.')
+    verify_launchpass_package(portal, package, identity)
     current, previous = remote_catalog(portal, package)
     action = 'unchanged' if current == catalog else 'create' if current is None else 'replace'
     report = {'mode': 'dry-run', 'rom_writes': 0, 'catalog': {'action': action}, 'generated_catalog': catalog}
@@ -973,7 +977,8 @@ def artwork_targets(portal, package, paths):
     return targets
 
 
-def stage_enrichment(portal, package, catalog, stage, apply, enrichment_python=None, exclude_bios=False):
+def stage_enrichment(portal, package, catalog, stage, apply, enrichment_python=None, exclude_bios=False,
+                     browser_artwork_only=False):
     import arcade_artwork as artwork
 
     try:
@@ -1009,6 +1014,8 @@ def stage_enrichment(portal, package, catalog, stage, apply, enrichment_python=N
                 if exclude_bios and is_bios_match(game):
                     continue
                 for role, asset in game['assets'].items():
+                    if browser_artwork_only and role not in ('logo', 'background', 'screenshot'):
+                        continue
                     stem = f"Artwork/games/{artwork.folder(game['id'])}/{role}"
                     if asset['status'] in ('would-download', 'written'):
                         paths[stem + '.png'] = files.path(stem + '.png')
@@ -1074,6 +1081,21 @@ def stage_enrichment(portal, package, catalog, stage, apply, enrichment_python=N
     return report, publish
 
 
+def upload_presentation_only(portal, catalog, package, identity, stage, enrichment_python=None):
+    verify_launchpass_package(portal, package, identity)
+    current, _ = remote_catalog(portal, package)
+    require(current == catalog, 'LaunchPass LocalState catalog differs from --catalog. Publish the reviewed catalog first.')
+    apply = portal.apply_enabled
+    enrichment, publish = stage_enrichment(portal, package, catalog, stage, apply, enrichment_python,
+                                           browser_artwork_only=True)
+    if apply:
+        current, _ = remote_catalog(portal, package)
+        require(current == catalog, 'LaunchPass catalog changed during enrichment; rerun dry-run.')
+        publish()
+    return {'mode': 'applied' if apply else 'dry-run', 'rom_writes': 0, 'catalog_writes': 0,
+            'enrichment': enrichment}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--rom-root', type=Path)
@@ -1081,6 +1103,8 @@ def main(argv=None):
     operation = parser.add_mutually_exclusive_group()
     operation.add_argument('--catalog-only', action='store_true', help='Offline generation only; never touches ROMs or Xbox')
     operation.add_argument('--upload-catalog-only', action='store_true', help='Device Portal publication of only --catalog; no ROM transfer')
+    operation.add_argument('--upload-presentation-only', action='store_true',
+                           help='Publish artwork and presentation metadata for the installed catalog; no ROM transfer')
     parser.add_argument('--xbox-rom-root', help='Explicit hardware-verified Windows ROM directory for --catalog-only')
     parser.add_argument('--platform', default='arcade', help='Scanned platform for --catalog-only (default arcade)')
     parser.add_argument('--mame-listxml', type=Path, help='Local MAME -listxml output for exact BIOS/device/parent classification')
@@ -1152,28 +1176,34 @@ def main(argv=None):
                 raise SyncError(f'Local catalog generation IO failed: {error}') from None
         require(not any((args.xbox_rom_root, args.mame_listxml, args.metadata_report)),
                 '--xbox-rom-root, --mame-listxml and --metadata-report require --catalog-only.')
-        if args.upload_catalog_only:
+        if args.upload_catalog_only or args.upload_presentation_only:
             require(args.url and args.launchpass_package_full_name and not args.snapshot,
-                    '--upload-catalog-only requires --url and --launchpass-package-full-name.')
-            require(not any((args.rom_root, args.enrich, args.enrichment_dir, args.enrichment_python,
-                             args.exclude_bios, args.clean_loose_arcade_components, args.output, args.core, args.game_core, args.platform_dir)),
-                    '--upload-catalog-only does not scan, enrich, generate or transfer ROMs.')
+                    'LaunchPass-only uploads require --url and --launchpass-package-full-name.')
+            require(not any((args.rom_root, args.enrich, args.exclude_bios, args.clean_loose_arcade_components,
+                             args.output, args.core, args.game_core, args.platform_dir)),
+                    'LaunchPass-only uploads do not scan, generate or transfer ROMs.')
+            if args.upload_presentation_only:
+                require(args.enrichment_dir is not None, '--upload-presentation-only requires --enrichment-dir.')
+                require(args.catalog_backup is None, '--catalog-backup requires --upload-catalog-only.')
         else:
             require(args.rom_root is not None and args.retroarch_package_full_name and args.launchpass_package_full_name,
                     'Synchronization requires --rom-root, --retroarch-package-full-name and --launchpass-package-full-name.')
             require(args.url or args.snapshot, 'Synchronization requires --url or --snapshot.')
             require(args.catalog_backup is None, '--catalog-backup requires --upload-catalog-only.')
         require(not (args.apply and args.snapshot), '--apply is forbidden with an offline snapshot.')
-        require(args.enrich == (args.enrichment_dir is not None), 'Use --enrich and --enrichment-dir together.')
-        require(args.enrich or args.enrichment_python is None, '--enrichment-python requires --enrich.')
+        uses_enrichment = args.enrich or args.upload_presentation_only
+        require(uses_enrichment == (args.enrichment_dir is not None),
+                'Use --enrichment-dir with --enrich or --upload-presentation-only.')
+        require(uses_enrichment or args.enrichment_python is None,
+                '--enrichment-python requires --enrich or --upload-presentation-only.')
         require(args.enrich or not args.exclude_bios, '--exclude-bios requires --enrich in synchronization mode.')
         require(not (args.enrich and args.snapshot), 'Enrichment requires a live Portal listing.')
         require(math.isfinite(args.timeout) and args.timeout > 0, 'Timeout must be positive and finite.')
         require(args.output is None or (not args.output.exists() and not args.output.is_symlink()), '--output must be a new local file.')
-        if args.upload_catalog_only:
+        if args.upload_catalog_only or args.upload_presentation_only:
             require(args.catalog.stat().st_size <= MAX_CATALOG_BYTES, 'Catalog exceeds 8 MiB.')
         seed = validate_catalog(read_json(args.catalog))
-        if args.upload_catalog_only:
+        if args.upload_catalog_only or args.upload_presentation_only:
             directories = {}
         else:
             directories = {p['id']: p['id'] for p in seed['platforms']}
@@ -1205,6 +1235,11 @@ def main(argv=None):
         if args.upload_catalog_only:
             report = upload_catalog_only(portal, seed, args.launchpass_package_full_name,
                                          args.launchpass_identity, args.catalog_backup)
+            print(json.dumps(report, indent=2, ensure_ascii=True))
+            return 0
+        if args.upload_presentation_only:
+            report = upload_presentation_only(portal, seed, args.launchpass_package_full_name,
+                                              args.launchpass_identity, args.enrichment_dir, args.enrichment_python)
             print(json.dumps(report, indent=2, ensure_ascii=True))
             return 0
         options = dict(seed=seed, root=args.rom_root, retroarch=args.retroarch_package_full_name,

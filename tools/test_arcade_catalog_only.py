@@ -54,7 +54,7 @@ class CatalogOnlyTests(unittest.TestCase):
         self.assertEqual(plan['scanned_files'], 5)
         game = next(g for g in plan['generated_catalog']['games'] if g['id'] == 'arcade-1941')
         self.assertEqual(game['rom'], XBOX_ROOT + r'\1941.zip')
-        self.assertNotIn(r'\arcade\arcade\', game['rom'])
+        self.assertNotIn('\\arcade\\arcade\\', game['rom'])
         self.assertEqual(plan['generated_catalog']['contentRoot'], XBOX_ROOT)
         self.assertTrue(all(sync.ntpath.isabs(g['rom']) for g in plan['generated_catalog']['games']))
 
@@ -266,6 +266,47 @@ class CatalogPublicationTests(unittest.TestCase):
         self.assertFalse(self.device.posts)
         sync.upload_catalog_only(self.portal, self.catalog, LP, sync.LAUNCHPASS_IDENTITY, self.backup)
         self.assertEqual(self.backup.read_bytes(), original)
+
+    def test_presentation_only_cli_uploads_art_and_metadata_for_published_catalog(self):
+        root = Path(self.temp.name).resolve()
+        source = root / 'generated.json'
+        original = sync.encode_catalog(self.catalog)
+        source.write_bytes(original)
+        self.device.files[LP, 'LocalState'][sync.CATALOG] = original
+        stage = root / 'artwork-stage'
+        identifier = self.catalog['games'][0]['id']
+        assets = stage / 'Artwork/games' / identifier
+        assets.mkdir(parents=True)
+        (assets / 'logo.png').write_bytes(b'staged logo')
+        sidecar = {'version': 1, 'games': [{'id': identifier, 'year': '1941'}]}
+        report = {'presentation': sidecar, 'games': [{'id': identifier, 'assets': {
+            'logo': {'status': 'preserved-custom', 'paths': [f'Artwork/games/{identifier}/logo.png']},
+            'extras/flyer': {'status': 'would-download'}}}]}
+        args = ['--upload-presentation-only', '--catalog', str(source), '--url', 'https://xbox.invalid',
+                '--launchpass-package-full-name', LP, '--enrichment-dir', str(stage)]
+        with patch.dict(sync.os.environ, {'XBOX_USER': 'synthetic', 'XBOX_PASS': 'synthetic'}), \
+                patch.object(sync, 'SyncPortal', return_value=self.portal), \
+                patch('arcade_artwork.import_catalog', return_value=report), \
+                patch.dict('sys.modules', {'PIL': type('PIL', (), {'Image': object()})}), \
+                patch('sys.stdout', io.StringIO()), patch('sys.stderr', io.StringIO()):
+            self.portal.apply_enabled = False
+            self.assertEqual(sync.main(args), 0)
+            self.assertFalse(self.device.posts)
+            self.portal.apply_enabled = True
+            self.assertEqual(sync.main(args + ['--apply']), 0)
+        self.assertEqual(len(self.device.upload_names), 2)
+        self.assertTrue(self.device.upload_names[0].startswith('LaunchPassArtwork-'))
+        self.assertEqual(self.device.upload_names[1], sync.PRESENTATION)
+        self.assertEqual(self.device.files[LP, 'LocalState'][sync.CATALOG], original)
+        self.assertEqual(sync.json_load(self.device.files[LP, 'LocalState'][sync.PRESENTATION]), sidecar)
+        self.assertFalse(any(package == RA and files for (package, _), files in self.device.files.items()))
+
+    def test_presentation_upload_rejects_a_different_installed_catalog(self):
+        self.device.files[LP, 'LocalState'][sync.CATALOG] = sync.encode_catalog(seed())
+        with patch.object(sync, 'stage_enrichment') as stage, self.assertRaisesRegex(sync.SyncError, 'differs'):
+            sync.upload_presentation_only(self.portal, self.catalog, LP, sync.LAUNCHPASS_IDENTITY, Path(self.temp.name))
+        stage.assert_not_called()
+        self.assertFalse(self.device.posts)
 
     def test_existing_backup_never_overwritten(self):
         self.device.files[LP, 'LocalState'][sync.CATALOG] = sync.encode_catalog(seed())

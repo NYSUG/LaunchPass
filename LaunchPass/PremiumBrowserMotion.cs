@@ -25,6 +25,8 @@ namespace RetroPass
         private PremiumPerformanceDiagnostics performance;
         private ScrollViewer wheelScroll;
         private Visual wheelVisual;
+        private bool wheelTranslationUnavailable;
+        private bool wheelTranslationStarted;
         private double wheelOffset;
         private bool foreground = true, subscribed, pressure, focusPending, centerPending, scrollingMotion, snapWheelOnce;
         private string lastRelease = "startup";
@@ -339,10 +341,14 @@ namespace RetroPass
                 wheelScroll.ViewChanged += WheelViewChanged;
             }
             var presenter = wheelScroll.Content as UIElement;
-            if (presenter != null)
+            if (presenter != null && wheelVisual == null && !wheelTranslationUnavailable)
             {
-                ElementCompositionPreview.SetIsTranslationEnabled(presenter, true);
-                wheelVisual = ElementCompositionPreview.GetElementVisual(presenter);
+                try
+                {
+                    ElementCompositionPreview.SetIsTranslationEnabled(presenter, true);
+                    wheelVisual = ElementCompositionPreview.GetElementVisual(presenter);
+                }
+                catch (ArgumentException ex) { DisableWheelTranslation(ex); }
             }
             double padding = Math.Max(0, (Wheel.ActualHeight - WheelPitch) / 2);
             WheelTopSpacer.Height = WheelBottomSpacer.Height = padding;
@@ -374,21 +380,43 @@ namespace RetroPass
             if (wheelVisual != null && Math.Abs(delta) > 0.01)
             {
                 double start = scrollingMotion ? wheelMotion.Retarget(delta, clock.Elapsed.TotalMilliseconds, WheelPitch * 2) : 0;
-                wheelVisual.StopAnimation("Translation");
-                wheelVisual.Properties.InsertVector3("Translation", new Vector3(0, (float)start, 0));
-                var animation = wheelVisual.Compositor.CreateVector3KeyFrameAnimation();
-                animation.InsertKeyFrame(0, new Vector3(0, (float)start, 0));
-                animation.InsertKeyFrame(1, Vector3.Zero, wheelVisual.Compositor.CreateCubicBezierEasingFunction(new Vector2(1f / 3, 1), new Vector2(2f / 3, 1)));
-                animation.Duration = TimeSpan.FromMilliseconds(WheelMotion.DurationMs);
-                wheelVisual.StartAnimation("Translation", animation);
+                try
+                {
+                    var offset = new Vector3(0, (float)start, 0);
+                    if (wheelTranslationStarted) wheelVisual.StopAnimation("Translation");
+                    wheelVisual.Properties.InsertVector3("Translation", offset);
+                    var animation = wheelVisual.Compositor.CreateVector3KeyFrameAnimation();
+                    animation.InsertKeyFrame(0, offset);
+                    animation.InsertKeyFrame(1, Vector3.Zero, wheelVisual.Compositor.CreateCubicBezierEasingFunction(new Vector2(1f / 3, 1), new Vector2(2f / 3, 1)));
+                    animation.Duration = TimeSpan.FromMilliseconds(WheelMotion.DurationMs);
+                    wheelVisual.StartAnimation("Translation", animation);
+                    wheelTranslationStarted = true;
+                }
+                catch (ArgumentException ex) { DisableWheelTranslation(ex); }
             }
             UpdateRowVisuals(scrollingMotion);
         }
         private void ResetWheelMotion()
         {
             wheelMotion.Reset(); scrollingMotion = false; snapWheelOnce = true; centerPending = false;
-            if (wheelVisual != null) { wheelVisual.StopAnimation("Translation"); wheelVisual.Properties.InsertVector3("Translation", Vector3.Zero); }
+            if (wheelVisual != null && wheelTranslationStarted)
+            {
+                wheelTranslationStarted = false;
+                try
+                {
+                    wheelVisual.StopAnimation("Translation");
+                    wheelVisual.Properties.InsertVector3("Translation", Vector3.Zero);
+                }
+                catch (ArgumentException ex) { DisableWheelTranslation(ex); }
+            }
             if (wheelScroll != null) wheelOffset = wheelScroll.VerticalOffset;
+        }
+        private void DisableWheelTranslation(ArgumentException error)
+        {
+            wheelVisual = null;
+            wheelTranslationStarted = false;
+            wheelTranslationUnavailable = true;
+            StartupLog.Write("Premium browser: wheel translation disabled: " + error.Message);
         }
         private void UpdateRowVisuals(bool animate)
         {

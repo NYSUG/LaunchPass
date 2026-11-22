@@ -184,6 +184,17 @@ The original Device Portal ROM synchronization invocation remains supported.
 It deliberately retains its RetroArch LocalState restrictions. Use --catalog-only
 for the D: migration; do not pass the D: catalog to the old ROM-upload branch.
 
+## Restore Premium Browser artwork and presentation
+
+After publishing the catalog, use the same catalog path and LaunchPass package
+arguments with `--upload-presentation-only`. Pass `--enrichment-dir` with your
+artwork staging directory and optionally `--enrichment-python .venv/bin/python3`
+if Pillow is installed in a different interpreter. Start with `--dry-run`,
+then use `--apply` after reviewing the report. This mode checks that the
+published catalog matches and sends missing logos, backgrounds, screenshots
+and presentation fields to LaunchPass LocalState. It does not replace the
+catalog or transfer ROM files.
+
 ## Validation status on the Windows implementation machine
 
 The new tests cover flat macOS-style paths, D: paths, curation, root migration,

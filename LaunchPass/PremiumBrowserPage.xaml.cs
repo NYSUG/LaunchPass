@@ -208,8 +208,11 @@ namespace RetroPass
                 if (action == CabinetAction.Select)
                 {
                     launching = true;
-                    ReleaseArtwork("launch");
-                    try { await GameDetailsPage.StartContent(games[selection.Current.Id]); }
+                    try
+                    {
+                        ReleaseArtwork("launch");
+                        await GameDetailsPage.StartContent(games[selection.Current.Id]);
+                    }
                     finally { launching = false; }
                     return;
                 }

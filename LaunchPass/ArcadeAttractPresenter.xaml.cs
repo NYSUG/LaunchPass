@@ -15,6 +15,8 @@ namespace RetroPass
     public sealed partial class ArcadeAttractPresenter : UserControl
     {
         private bool motion;
+        private Visual gridDrift;
+        private Visual exhibitDrift;
         public ArcadeAttractPresenter()
         {
             InitializeComponent();SizeChanged+=(sender,args)=>BuildGrid();
@@ -34,14 +36,14 @@ namespace RetroPass
             Entrance.Visibility=branded?Visibility.Visible:Visibility.Collapsed;
             Entrance.Source=branded?new BitmapImage(new Uri("ms-appx:///Assets/Branding/TimsArcadeSplash.png")){DecodePixelWidth=1280}:null;
             BuildGrid();
-            var visual=ElementCompositionPreview.GetElementVisual(NeonGrid);
-            ElementCompositionPreview.SetIsTranslationEnabled(NeonGrid,true);
             if(motion)
             {
+                var visual=ElementCompositionPreview.GetElementVisual(NeonGrid);
                 var drift=visual.Compositor.CreateVector3KeyFrameAnimation();
                 drift.InsertKeyFrame(0,Vector3.Zero);drift.InsertKeyFrame(1,new Vector3(0,18,0));
                 drift.Duration=TimeSpan.FromSeconds(9);drift.Direction=AnimationDirection.Alternate;drift.IterationBehavior=AnimationIterationBehavior.Forever;
-                visual.StartAnimation("Translation",drift);
+                StopDrift(ref gridDrift);
+                gridDrift = StartDrift(NeonGrid, visual, drift);
             }
         }
         private void BuildGrid()
@@ -60,23 +62,50 @@ namespace RetroPass
             // Position and metadata move between exhibits, rather than forming a permanent HUD.
             Exhibit.Margin=new Thickness(64+(exhibit%3-1)*12,48+(exhibit%2)*8,64,48);
             var visual=ElementCompositionPreview.GetElementVisual(Exhibit);
-            ElementCompositionPreview.SetIsTranslationEnabled(Exhibit,true);
-            visual.StopAnimation("Opacity");visual.StopAnimation("Translation");
+            visual.StopAnimation("Opacity");
+            StopDrift(ref exhibitDrift);
             if(motion)
             {
                 var fade=visual.Compositor.CreateScalarKeyFrameAnimation();fade.InsertKeyFrame(0,0);fade.InsertKeyFrame(1,1);fade.Duration=TimeSpan.FromMilliseconds(650);
                 visual.StartAnimation("Opacity",fade);
-                var drift=visual.Compositor.CreateVector3KeyFrameAnimation();drift.InsertKeyFrame(0,new Vector3(-8,0,0));drift.InsertKeyFrame(1,new Vector3(8,0,0));drift.Duration=TimeSpan.FromSeconds(12);visual.StartAnimation("Translation",drift);
+                var drift=visual.Compositor.CreateVector3KeyFrameAnimation();drift.InsertKeyFrame(0,new Vector3(-8,0,0));drift.InsertKeyFrame(1,new Vector3(8,0,0));drift.Duration=TimeSpan.FromSeconds(12);
+                exhibitDrift = StartDrift(Exhibit, visual, drift);
             }
-            else{visual.Opacity=1;visual.Properties.InsertVector3("Translation",Vector3.Zero);}
+            else visual.Opacity=1;
         }
+
+        private static Visual StartDrift(UIElement element, Visual visual, Vector3KeyFrameAnimation animation)
+        {
+            try
+            {
+                ElementCompositionPreview.SetIsTranslationEnabled(element, true);
+                visual.StartAnimation("Translation", animation);
+                return visual;
+            }
+            catch (ArgumentException ex)
+            {
+                StartupLog.Write("Arcade museum: translation unavailable: " + ex.Message);
+                return null;
+            }
+        }
+
+        private static void StopDrift(ref Visual drift)
+        {
+            var visual = drift;
+            drift = null;
+            if (visual == null) return;
+            try { visual.StopAnimation("Translation"); }
+            catch (ArgumentException ex) { StartupLog.Write("Arcade museum: translation cleanup skipped: " + ex.Message); }
+        }
+
         internal void End()
         {
             Visibility=Visibility.Collapsed;Logo.Source=null;Entrance.Source=null;
             TitleFallback.Text=TitleLabel.Text=DetailLabel.Text="";
             ElementCompositionPreview.GetElementVisual(MuseumRoot).StopAnimation("Opacity");
-            ElementCompositionPreview.GetElementVisual(NeonGrid).StopAnimation("Translation");
-            var visual=ElementCompositionPreview.GetElementVisual(Exhibit);visual.StopAnimation("Opacity");visual.StopAnimation("Translation");
+            StopDrift(ref gridDrift);
+            StopDrift(ref exhibitDrift);
+            ElementCompositionPreview.GetElementVisual(Exhibit).StopAnimation("Opacity");
         }
     }
 }
