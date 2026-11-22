@@ -551,7 +551,7 @@ def classify_offline(name, evidence):
 
 
 def catalog_only_plan(seed, root, xbox_root, platform='arcade', folder='.', extensions=None,
-                      defaults=None, overrides=None, evidence=None):
+                      defaults=None, overrides=None, evidence=None, friendly_titles=False):
     """Migrate scanned sets to an explicit per-platform root; retain all curation."""
     validate_catalog(seed)
     target = root_path(xbox_root)
@@ -592,6 +592,8 @@ def catalog_only_plan(seed, root, xbox_root, platform='arcade', folder='.', exte
     report = {'mode': 'catalog-only', 'network_access': False, 'rom_writes': 0,
               'xbox_rom_root': target, 'platform': pid, 'scanned_files': len(roms),
               'entries': [], 'retained_unscanned': [], 'excluded': [], 'ambiguous': []}
+    if friendly_titles:
+        report['title_changes'] = []
     for rom in roms:
         suffix = relative(rom.rom[len(pid) + 1:])
         # Windows separators/device names can occur in literal POSIX filenames.
@@ -638,6 +640,11 @@ def catalog_only_plan(seed, root, xbox_root, platform='arcade', folder='.', exte
             item['id'] = gid
         else:
             game['rom'] = item['xbox_path']
+        if friendly_titles and info['reason'] != 'conflicting exact metadata':
+            title = friendly_title_for_game(game, info['title'])
+            if title != game['title']:
+                report['title_changes'].append({'id': game['id'], 'before': game['title'], 'after': title})
+                game['title'] = title
         override_key = rom.rom.casefold()
         if override_key in overrides:
             require(game.get('core') in (None, overrides[override_key]), 'Refusing to replace a curated per-game core override.')
@@ -876,6 +883,17 @@ def friendly_arcade_title(title):
     return title
 
 
+def friendly_title_for_game(game, supplied_title):
+    try:
+        text(supplied_title)
+    except SyncError:
+        return game['title']
+    title = supplied_title.strip()
+    if game['title'] == title or has_archive_stem_title(game):
+        return friendly_arcade_title(title)
+    return game['title']
+
+
 def build_publication_report(plan, enrichment=None, exclude_bios=False, clean_loose_components=False):
     report = copy.deepcopy(plan.report)
     catalog = report['generated_catalog']
@@ -903,14 +921,7 @@ def build_publication_report(plan, enrichment=None, exclude_bios=False, clean_lo
               for item in games if item['status'] == 'matched'}
     renamed = []
     for game in catalog['games']:
-        title = titles.get(game['id'])
-        try:
-            text(title)
-        except SyncError:
-            continue
-        if not has_archive_stem_title(game) and game['title'] != title.strip():
-            continue
-        title = friendly_arcade_title(title.strip())
+        title = friendly_title_for_game(game, titles.get(game['id']))
         if game['title'] != title:
             game['title'] = title
             renamed.append(game['id'])
@@ -1109,6 +1120,8 @@ def main(argv=None):
     parser.add_argument('--platform', default='arcade', help='Scanned platform for --catalog-only (default arcade)')
     parser.add_argument('--mame-listxml', type=Path, help='Local MAME -listxml output for exact BIOS/device/parent classification')
     parser.add_argument('--metadata-report', type=Path, help='Local arcade_artwork.py report for exact cached BIOS classification')
+    parser.add_argument('--friendly-titles', action='store_true',
+                        help='Use friendly names from exact local metadata in --catalog-only')
     parser.add_argument('--catalog-backup', type=Path, help='NEW local backup required before replacing a catalog in upload-only mode')
     source = parser.add_mutually_exclusive_group()
     source.add_argument('--url', help='Device Portal HTTPS origin; credentials are prompted, never arguments')
@@ -1162,8 +1175,11 @@ def main(argv=None):
                     require(key not in overrides, 'Duplicate normalized --game-core ROM path.')
                     overrides[key] = value
                 evidence = offline_metadata(args.mame_listxml, args.metadata_report)
+                require(not args.friendly_titles or args.mame_listxml or args.metadata_report,
+                        '--friendly-titles requires --mame-listxml or --metadata-report.')
                 report = catalog_only_plan(seed, args.rom_root, args.xbox_rom_root, args.platform,
-                    next(iter(directories.values()), '.'), extensions, pairs_arg(args.core, core_name), overrides, evidence)
+                    next(iter(directories.values()), '.'), extensions, pairs_arg(args.core, core_name), overrides,
+                    evidence, friendly_titles=args.friendly_titles)
                 data = encode_catalog(report['generated_catalog'])
                 require(len(data) <= MAX_CATALOG_BYTES, 'Generated catalog exceeds 8 MiB.')
                 if args.output:
@@ -1174,8 +1190,8 @@ def main(argv=None):
                 return 0
             except OSError as error:
                 raise SyncError(f'Local catalog generation IO failed: {error}') from None
-        require(not any((args.xbox_rom_root, args.mame_listxml, args.metadata_report)),
-                '--xbox-rom-root, --mame-listxml and --metadata-report require --catalog-only.')
+        require(not any((args.xbox_rom_root, args.mame_listxml, args.metadata_report, args.friendly_titles)),
+                '--xbox-rom-root, --mame-listxml, --metadata-report and --friendly-titles require --catalog-only.')
         if args.upload_catalog_only or args.upload_presentation_only:
             require(args.url and args.launchpass_package_full_name and not args.snapshot,
                     'LaunchPass-only uploads require --url and --launchpass-package-full-name.')

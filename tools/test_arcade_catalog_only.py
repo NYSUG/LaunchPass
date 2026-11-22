@@ -87,6 +87,21 @@ class CatalogOnlyTests(unittest.TestCase):
         self.assertEqual({g['classification'] for g in plan['excluded']}, {'bios', 'device'})
         self.assertEqual({p: p.read_bytes() for p in before}, before)
 
+    def test_friendly_titles_update_archive_stems_and_prior_imports_but_preserve_curation(self):
+        self.seed['games'].extend([
+            {'id': 'keep-mk', 'platform': 'arcade', 'title': 'mk', 'rom': 'arcade/mk.zip'},
+            {'id': 'keep-neogeo', 'platform': 'arcade', 'title': 'Neo Geo (World)', 'rom': 'arcade/neogeo.zip'},
+        ])
+        evidence = self.xml('<machine name="1941"><description>1941 (World)</description></machine>'
+                            '<machine name="mk"><description>Mortal Kombat (rev 5.0)</description></machine>'
+                            '<machine name="neogeo"><description>Neo Geo (World)</description></machine>')
+        result = self.plan(evidence=evidence, friendly_titles=True)
+        titles = {game['id']: game['title'] for game in result['generated_catalog']['games']}
+        self.assertEqual(titles['arcade-1941'], '1941: manual title')
+        self.assertEqual(titles['keep-mk'], 'Mortal Kombat')
+        self.assertEqual(titles['keep-neogeo'], 'Neo Geo')
+        self.assertEqual([change['id'] for change in result['title_changes']], ['keep-mk', 'keep-neogeo'])
+
     def test_unknown_bios_name_is_retained_and_reported(self):
         plan = self.plan()
         self.assertIn('neogeo', {g['title'] for g in plan['generated_catalog']['games']})
