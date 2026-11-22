@@ -132,6 +132,7 @@ namespace RetroPass
         }
         private void RequestArtwork()
         {
+            if (ArcadeSessionCoordinator.Current.Engine.Input.AttractActive) return;
             if (!active || !foreground || selection?.Current == null) return;
             if (requestedId == selection.Current.Id && clock.ElapsedMilliseconds - selectionStarted < 30000) return;
             if (lastCategory == selection.Current.PlatformId && lastIndex != selection.SelectedIndex)
@@ -256,6 +257,7 @@ namespace RetroPass
         }
         private void ReleaseArtwork(string reason)
         {
+            ReleaseExperienceArtwork();
             lastRelease = reason;
             generation++; requestedId = null;
             detailTimer.Stop();

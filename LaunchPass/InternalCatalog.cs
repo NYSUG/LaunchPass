@@ -25,19 +25,23 @@ namespace RetroPass
         public override void Init() { }
         public async Task LaunchAsync()
         {
+            if (ArcadeSessionCoordinator.BlockActions) return;
             if (launching) return;
             launching = true;
+            bool accepted = false;
             try
             {
+                await ArcadeSessionCoordinator.BeforeLaunchAsync();
                 // Use the very same production generator and activation API as the probe.
                 string url = UrlSchemeGenerator.GetUrl(this);
                 if (url != Entry.Launch.ProtocolUri) throw new InvalidOperationException("Catalog launch format differs from the validated generator.");
                 Log("Game=" + Entry.Id + " activation requested URI=" + url);
                 bool activated = await Launcher.LaunchUriAsync(new Uri(url));
+                accepted = activated;
                 Log("Game=" + Entry.Id + " LaunchUriAsync=" + activated + "; game loading requires Xbox verification");
                 if (!activated) throw new InvalidOperationException("RetroArch protocol activation was declined.");
             }
-            finally { launching = false; }
+            finally { launching = false; ArcadeSessionCoordinator.LaunchFinished(accepted); }
         }
         internal static void Log(string message)
         {

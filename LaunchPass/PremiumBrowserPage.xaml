@@ -5,8 +5,14 @@
     xmlns:local="using:RetroPass"
     Background="#080D18" NavigationCacheMode="Required">
     <Page.Resources>
+        <ResourceDictionary>
+        <ResourceDictionary.MergedDictionaries>
+            <ResourceDictionary Source="Themes/TimsArcadeTheme.xaml" />
+        </ResourceDictionary.MergedDictionaries>
         <DataTemplate x:Key="WheelTemplate" x:DataType="local:PremiumWheelItem">
-            <Border BorderBrush="{x:Bind Outline, Mode=OneWay}" BorderThickness="3" Background="{x:Bind Fill, Mode=OneWay}" CornerRadius="5">
+            <Grid>
+            <Border BorderBrush="{x:Bind Glow, Mode=OneWay}" BorderThickness="6" CornerRadius="12" />
+            <Border BorderBrush="{x:Bind Outline, Mode=OneWay}" BorderThickness="2" Background="{x:Bind Fill, Mode=OneWay}" CornerRadius="5" Margin="3">
             <Grid Height="70" Padding="12,6">
                 <TextBlock Text="{x:Bind Title, Mode=OneWay}" FontSize="{x:Bind TitleSize, Mode=OneWay}" FontWeight="SemiBold"
                            Foreground="White" TextWrapping="Wrap" VerticalAlignment="Center"
@@ -14,6 +20,7 @@
                 <Image Source="{x:Bind Logo, Mode=OneWay}" Stretch="Uniform" />
             </Grid>
             </Border>
+            </Grid>
         </DataTemplate>
         <Style x:Key="WheelContainer" TargetType="ListViewItem">
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -22,6 +29,7 @@
             <Setter Property="Height" Value="82" />
             <Setter Property="BorderThickness" Value="0" />
         </Style>
+        </ResourceDictionary>
     </Page.Resources>
     <Grid x:Name="PremiumRoot">
         <Grid.RowDefinitions>
@@ -29,11 +37,11 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <Grid>
+        <Grid x:Name="BrowserScene">
             <Grid.Background>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="#101F35" Offset="0" />
-                    <GradientStop Color="#080D18" Offset="1" />
+                    <GradientStop x:Name="ArcadeGradientStart" Color="{StaticResource ArcadeMidnightColor}" Offset="0" />
+                    <GradientStop x:Name="ArcadeGradientEnd" Color="{StaticResource ArcadeDepthColor}" Offset="1" />
                 </LinearGradientBrush>
             </Grid.Background>
             <Grid x:Name="BackgroundLayerA">
@@ -58,7 +66,10 @@
                 </Grid.RowDefinitions>
                 <Grid>
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                    <TextBlock x:Name="CategoryText" FontSize="22" FontWeight="SemiBold" Foreground="#73E1F5" TextTrimming="CharacterEllipsis" />
+                    <StackPanel>
+                        <TextBlock x:Name="BrandTag" Text="TIM'S ARCADE" FontSize="11" CharacterSpacing="180" Foreground="{StaticResource ArcadeActionBrush}" />
+                        <TextBlock x:Name="CategoryText" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource ArcadeNavigationBrush}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
                     <TextBlock x:Name="PositionText" Grid.Column="1" FontSize="16" Foreground="#B9C5D7" VerticalAlignment="Center" Margin="16,0,0,0" />
                 </Grid>
                 <Grid Grid.Row="1" Margin="0,12">
@@ -102,12 +113,20 @@
                     </ListView>
                 </Grid>
                 <StackPanel Grid.Row="2">
-                    <TextBlock Text="↑ ↓ Games    ← → Category    SELECT / A Play    BACK / B Library" FontSize="15" Foreground="#D8E5F3" TextWrapping="Wrap" />
+                    <TextBlock FontSize="15" Foreground="{StaticResource ArcadeTextBrush}" TextWrapping="Wrap">
+                        <Run Text="↑ ↓ Games    ← → Category    " />
+                        <Run Text="SELECT / A Play" Foreground="{StaticResource ArcadeActionBrush}" />
+                        <Run Text="    BACK / B Library" />
+                    </TextBlock>
                     <TextBlock x:Name="StatusText" FontSize="14" Foreground="#73E1F5" TextWrapping="Wrap" Margin="0,4,0,0" />
                 </StackPanel>
             </Grid>
         </Grid>
         <TextBlock x:Name="PerformanceText" Grid.Row="2" Visibility="Collapsed" IsHitTestVisible="False"
                    FontSize="12" MaxHeight="64" TextWrapping="Wrap" Foreground="#73E1F5" Margin="48,0,48,4" />
+        <local:ArcadeAttractPresenter x:Name="Museum" Grid.RowSpan="3" Visibility="Collapsed" />
+        <Grid x:Name="StartupOverlay" Grid.RowSpan="3" Visibility="Collapsed" Background="#101522">
+            <Image x:Name="StartupEntrance" Stretch="UniformToFill" />
+        </Grid>
     </Grid>
 </Page>

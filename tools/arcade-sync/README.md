@@ -1,5 +1,11 @@
 # Portable arcade library synchronization
 
+For offline catalog generation using the hardware-tested DevelopmentFiles ROM
+root, see [the Milestone 3D Mac workflow](../../Docs/DevelopmentFiles-Catalog.md).
+`--catalog-only --xbox-rom-root` does not contact the Xbox or upload ROMs.
+`--upload-catalog-only` is a separate, dry-run-by-default catalog publisher.
+The original LocalState synchronization workflow below remains supported.
+
 `../arcade_sync.py` scans local platform folders, merges the existing InternalCatalog v1 manifest, and compares ROM filenames/sizes with Xbox Device Portal. It is a standalone Python 3.9+ CLI using the standard library. No UWP build, .NET SDK, pip packages, running LaunchPass process, or Windows machine is required.
 
 **Default behavior is dry-run.** Live dry-runs make authenticated GET requests; they never upload. `--snapshot` plans entirely offline and cannot be combined with `--apply`. No live Xbox requests or uploads were performed while implementing this tool. Milestone 2 remains uncompiled and untested on Xbox.

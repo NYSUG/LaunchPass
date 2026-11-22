@@ -91,6 +91,7 @@ namespace RetroPass
         }
         private static bool Process(VirtualKey key, bool down, bool wasDown)
         {
+            if (ArcadeSessionCoordinator.ConsumeKey(key, down)) return true;
             int token; CabinetAction action;
             if (!Enabled) return false;
             if (!map.TryResolve((int)key, out token, out action))
@@ -104,7 +105,8 @@ namespace RetroPass
                 // Keep the press state across page/dialog transitions, until key-up.
                 try
                 {
-                    if (action != CabinetAction.Favorites && action != CabinetAction.AddFavorite) targets[targets.Count - 1].Action(action);
+                    if (action == CabinetAction.NextTrack) ArcadeSessionCoordinator.NextTrack();
+                    else if (action != CabinetAction.Favorites && action != CabinetAction.AddFavorite) targets[targets.Count - 1].Action(action);
                 }
                 catch (Exception ex) { StartupLog.Write("Cabinet action " + action + " failed: " + ex); }
             }

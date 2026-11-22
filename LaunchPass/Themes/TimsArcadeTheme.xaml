@@ -1,0 +1,21 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Color x:Key="ArcadeMidnightColor">#101522</Color>
+    <Color x:Key="ArcadeDepthColor">#090E17</Color>
+    <SolidColorBrush x:Key="ArcadeNavigationBrush" Color="#32D8E8" />
+    <SolidColorBrush x:Key="ArcadeActionBrush" Color="#FF9A3D" />
+    <SolidColorBrush x:Key="ArcadeTextBrush" Color="#F4F5ED" />
+    <SolidColorBrush x:Key="ArcadeMutedBrush" Color="#BECBD2" />
+    <SolidColorBrush x:Key="ArcadePanelBrush" Color="#60101522" />
+    <SolidColorBrush x:Key="ArcadeSelectedBrush" Color="#50106C80" />
+    <SolidColorBrush x:Key="ArcadeGlowBrush" Color="#4032D8E8" />
+    <Style x:Key="ArcadePrimaryButton" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource ArcadeActionBrush}" />
+        <Setter Property="Foreground" Value="#101522" />
+        <Setter Property="FontFamily" Value="Segoe UI" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="MinHeight" Value="40" />
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource ArcadeNavigationBrush}" />
+    </Style>
+</ResourceDictionary>

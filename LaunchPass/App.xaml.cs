@@ -199,6 +199,7 @@ namespace RetroPass
             {
                 StartupLog.Write("Catalog navigation: begin");
                 bool premium = await ApplicationData.Current.LocalFolder.TryGetItemAsync("PremiumBrowser.enabled") is StorageFile;
+                if (premium) await ArcadeSessionCoordinator.Current.InitializeAsync();
                 StartupLog.Write("Catalog presentation: " + (premium ? "premium browser" : "existing library"));
                 bool navigated = frame.Navigate(premium ? typeof(PremiumBrowserPage) : typeof(InternalCatalogPage));
                 StartupLog.Write("Catalog navigation: returned " + navigated);

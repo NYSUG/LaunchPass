@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -149,7 +149,7 @@
     <Compile Include="InputDiagnostics.cs" />
     <Compile Include="CabinetInput.cs" />
     <Compile Include="PremiumArtworkCache.cs" />
-    <Compile Include="PremiumBrowserMotion.cs" />
+    <Compile Include="PremiumBrowserMotion.cs" /><Compile Include="PremiumBrowserExperience.cs" /><Compile Include="ArcadeRadioService.cs" /><Compile Include="ArcadeSessionCoordinator.cs" /><Compile Include="ArcadeAttractPresenter.xaml.cs"><DependentUpon>ArcadeAttractPresenter.xaml</DependentUpon></Compile>
     <Compile Include="PremiumPerformanceDiagnostics.cs" />
     <Compile Include="InternalCatalogPage.xaml.cs">
       <DependentUpon>InternalCatalogPage.xaml</DependentUpon>
@@ -206,7 +206,7 @@
     <Content Include="Assets\Background\Purpz-LP.mp4" />
     <Content Include="Assets\Background\Waves-LP.mp4" />
     <Content Include="Assets\Background\Zoom-LP.mp4" />
-    <Content Include="Assets\DescriptionBackground.png" />
+    <Content Include="Assets\DescriptionBackground.png" /><Content Include="Assets\Branding\TimsArcadeSplash.png" />
     <Content Include="Assets\empty.png" />
     <Content Include="Assets\LargeTile.scale-100.png" />
     <Content Include="Assets\LargeTile.scale-125.png" />
@@ -271,7 +271,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Page Include="PremiumBrowserPage.xaml">
+    <Page Include="ArcadeAttractPresenter.xaml"><Generator>MSBuild:Compile</Generator></Page><Page Include="Themes\TimsArcadeTheme.xaml"><Generator>MSBuild:Compile</Generator></Page><Page Include="PremiumBrowserPage.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

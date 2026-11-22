@@ -22,6 +22,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import xml.etree.ElementTree as ET
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request
@@ -491,6 +492,212 @@ def generated_game_id(platform, normalized_rom):
     return platform + '-' + hashlib.sha256(normalized_rom.encode('utf-8')).hexdigest()[:16]
 
 
+def offline_metadata(xml_path=None, report_path=None):
+    """Read exact-name local evidence only. No API calls, heuristics or ROM reads."""
+    records = {}
+    def add(name, value):
+        require(isinstance(name, str) and re.fullmatch(r'[A-Za-z0-9_]+', name),
+                'Invalid ROM short name in offline metadata.')
+        records.setdefault(name.casefold(), []).append(value)
+    if xml_path:
+        try:
+            for event, node in ET.iterparse(xml_path, events=('end',)):
+                if node.tag not in ('machine', 'game'):
+                    continue
+                bios, device = node.get('isbios', 'no'), node.get('isdevice', 'no')
+                kind = ('bios' if bios == 'yes' else 'device' if device == 'yes' else
+                        'game' if bios == device == 'no' and node.get('runnable', 'yes') == 'yes' else 'unknown')
+                add(node.get('name'), {'kind': kind, 'source': 'MAME XML',
+                    'title': node.findtext('description'), 'cloneof': node.get('cloneof'), 'romof': node.get('romof')})
+                node.clear()
+        except ET.ParseError as error:
+            raise SyncError(f'Invalid MAME XML: {error}') from None
+    if report_path:
+        require(report_path.stat().st_size <= MAX_CATALOG_BYTES, 'Offline metadata report exceeds 8 MiB.')
+        report = read_json(report_path)
+        require(isinstance(report, dict) and isinstance(report.get('games'), list),
+                '--metadata-report must be an arcade_artwork.py report with a games array.')
+        for item in report['games']:
+            require(isinstance(item, dict), 'Invalid offline metadata report entry.')
+            if item.get('status') != 'matched':
+                continue
+            name = item.get('source_rom')
+            # Explicit mappings to a different set cannot classify the original ROM.
+            if not isinstance(name, str) or not isinstance(item.get('rom'), str) or item['rom'].casefold() != name.casefold():
+                continue
+            meta = item.get('metadata', {})
+            require(isinstance(meta, dict), 'Invalid matched metadata object.')
+            genre = meta.get('genre')
+            require(all(value is None or isinstance(value, str) for value in (item.get('cloneof'), meta.get('romof'))),
+                    'Parent names in offline metadata must be strings.')
+            kind = 'bios' if isinstance(genre, str) and genre.strip().casefold() == 'system / bios' else 'unknown'
+            add(name, {'kind': kind, 'source': 'ArcadeItalia exact cached report',
+                       'title': meta.get('title'), 'cloneof': item.get('cloneof'), 'romof': meta.get('romof')})
+    return records
+
+
+def classify_offline(name, evidence):
+    rows = evidence.get(name.casefold(), [])
+    kinds = {row['kind'] for row in rows if row['kind'] != 'unknown'}
+    parents = {row.get('cloneof') for row in rows if row.get('cloneof')}
+    rom_parents = {row.get('romof') for row in rows if row.get('romof')}
+    conflict = len(kinds) > 1 or len(parents) > 1 or len(rom_parents) > 1
+    return {'classification': next(iter(kinds)) if len(kinds) == 1 and not conflict else 'ambiguous',
+            'reason': 'conflicting exact metadata' if conflict else 'no authoritative classification' if not kinds else 'exact local metadata',
+            'cloneof': next(iter(parents)) if len(parents) == 1 else None,
+            'romof': next(iter(rom_parents)) if len(rom_parents) == 1 else None,
+            'sources': sorted({row['source'] for row in rows}),
+            'title': next((row['title'] for row in rows if isinstance(row.get('title'), str) and row['title'].strip()), None)}
+
+
+def catalog_only_plan(seed, root, xbox_root, platform='arcade', folder='.', extensions=None,
+                      defaults=None, overrides=None, evidence=None):
+    """Migrate scanned sets to an explicit per-platform root; retain all curation."""
+    validate_catalog(seed)
+    target = root_path(xbox_root)
+    require(not re.search(r'(^|\\)(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(?:\.|\\|$)', target[3:], re.I),
+            'Xbox root contains a Windows device name.')
+    pid = next((p['id'] for p in seed['platforms'] if p['id'].casefold() == platform.casefold()), None)
+    require(pid is not None, '--platform must identify an existing seed platform.')
+    defaults, overrides, evidence = defaults or {}, overrides or {}, evidence or {}
+    for key, core in defaults.items():
+        item = next((p for p in seed['platforms'] if p['id'].casefold() == key.casefold()), None)
+        require(item is not None and item['defaultCore'] == core, 'Refusing to replace a curated platform default core.')
+    roms = scan_library(root, {pid: folder}, extensions or {'.zip', '.7z', '.chd'})
+    old_root = root_path(seed['contentRoot'])
+    original = copy.deepcopy(seed)
+    doc = copy.deepcopy(seed)
+    doc['contentRoot'] = target
+    # Freeze entries not migrated below, so changing contentRoot cannot redirect them.
+    for game in doc['games']:
+        game['rom'] = absolute(game['rom']) if re.match(r'^[A-Za-z]:[/\\]', game['rom']) else old_root.rstrip('\\') + '\\' + relative(game['rom'])
+    selected = [game for game in doc['games'] if game['platform'].casefold() == pid.casefold()]
+    suffix_index, basename_index = {}, {}
+    for game in doc['games']:
+        path = absolute(game['rom'])
+        suffix = None
+        if path.casefold().startswith(old_root.casefold().rstrip('\\') + '\\'):
+            suffix = path[len(old_root.rstrip('\\')) + 1:]
+            if suffix.casefold().startswith(pid.casefold() + '\\'):
+                suffix = suffix[len(pid) + 1:]
+        if suffix is not None:
+            suffix_index.setdefault(suffix.casefold(), []).append(game)
+        basename_index.setdefault(ntpath.basename(path).casefold(), []).append(game)
+    local_names = {}
+    for rom in roms:
+        local_names[rom.source.name.casefold()] = local_names.get(rom.source.name.casefold(), 0) + 1
+    original_ids = {game['id'].casefold() for game in doc['games']}
+    ids = set(original_ids)
+    matched, used_overrides, excluded_ids = set(), set(), set()
+    report = {'mode': 'catalog-only', 'network_access': False, 'rom_writes': 0,
+              'xbox_rom_root': target, 'platform': pid, 'scanned_files': len(roms),
+              'entries': [], 'retained_unscanned': [], 'excluded': [], 'ambiguous': []}
+    for rom in roms:
+        suffix = relative(rom.rom[len(pid) + 1:])
+        # Windows separators/device names can occur in literal POSIX filenames.
+        local_parts = rom.source.relative_to(root.joinpath(*platform_folder(folder).split('\\'))).parts
+        require(all('\\' not in part and not re.match(r'^(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(?:\.|$)', part, re.I)
+                    for part in local_parts), 'Local filename is unsafe on Windows: ' + str(rom.source))
+        candidates = suffix_index.get(suffix.casefold(), [])
+        method = 'relative path'
+        if not candidates:
+            candidates = basename_index.get(rom.source.name.casefold(), [])
+            if candidates:
+                require(len(candidates) == 1 and local_names[rom.source.name.casefold()] == 1,
+                        'Ambiguous curated basename match: ' + rom.source.name)
+            method = 'unique basename'
+        require(len(candidates) <= 1, 'Ambiguous curated relative ROM path: ' + suffix)
+        game = candidates[0] if candidates else None
+        if game:
+            require(game['id'] not in matched, 'One curated entry matched multiple local ROMs: ' + game['id'])
+            matched.add(game['id'])
+        info = classify_offline(rom.source.stem, evidence)
+        item = dict(info, local_relative=suffix.replace('\\', '/'),
+                    xbox_path=target.rstrip('\\') + '\\' + suffix,
+                    match=method if game else 'new', id=game['id'] if game else None)
+        if rom.source.suffix.casefold() == '.chd':
+            item['classification'] = 'dependency-chd'
+            if game:
+                # Preserve a deliberately curated CHD entry rather than deleting it.
+                game['rom'] = item['xbox_path']
+                item['classification'] = 'curated-chd'
+            report['entries'].append(item)
+            continue
+        if info['classification'] in ('bios', 'device'):
+            if game:
+                excluded_ids.add(game['id'])
+            report['excluded'].append(item)
+            report['entries'].append(item)
+            continue
+        if game is None:
+            gid = generated_game_id(pid, (pid + '/' + suffix.replace('\\', '/')).casefold())
+            require(gid.casefold() not in ids, 'Generated game ID collision; resolve in seed.')
+            ids.add(gid.casefold())
+            game = {'id': gid, 'platform': pid, 'title': info['title'] or rom.source.stem, 'rom': item['xbox_path']}
+            doc['games'].append(game)
+            item['id'] = gid
+        else:
+            game['rom'] = item['xbox_path']
+        override_key = rom.rom.casefold()
+        if override_key in overrides:
+            require(game.get('core') in (None, overrides[override_key]), 'Refusing to replace a curated per-game core override.')
+            game['core'] = overrides[override_key]
+            used_overrides.add(override_key)
+        if info['classification'] == 'ambiguous':
+            report['ambiguous'].append(item)
+        report['entries'].append(item)
+    require(used_overrides == set(overrides), 'A --game-core entry did not match a visible scanned ROM.')
+    doc['games'] = [game for game in doc['games'] if game['id'] not in excluded_ids]
+    report['retained_unscanned'] = [game['id'] for game in selected if game['id'] not in matched]
+    report['visible_games'] = len(doc['games'])
+    report['summary'] = {'scanned_files': len(roms), 'visible_games': len(doc['games']),
+                         'excluded_bios_devices': len(report['excluded']),
+                         'ambiguous_retained': len(report['ambiguous']),
+                         'matched_existing': len(matched),
+                         'new_games': sum(game['id'].casefold() not in original_ids for game in doc['games']),
+                         'retained_unscanned': len(report['retained_unscanned']), 'rom_writes': 0}
+    local_sets = {rom.source.stem.casefold() for rom in roms if rom.source.suffix.casefold() in ('.zip', '.7z')}
+    report['dependencies_not_in_local_scan'] = sorted({parent for item in report['entries']
+        for parent in (item.get('cloneof'), item.get('romof')) if parent and parent.casefold() not in local_sets})
+    report['xbox_file_existence'] = 'Not checked: paths use the explicit --xbox-rom-root; no Xbox connection.'
+    report['generated_catalog'] = validate_catalog(doc)
+    require(seed == original, 'Input catalog changed during generation.')
+    for rom in roms:
+        require(fingerprint(rom.source) == rom.stamp, 'Local ROM changed while scanning: ' + str(rom.source))
+    return report
+
+
+def upload_catalog_only(portal, catalog, package, identity, backup=None):
+    """Only LocalState/InternalCatalog.json can be POSTed by this branch."""
+    validate_catalog(catalog)
+    data = encode_catalog(catalog)
+    require(len(data) <= MAX_CATALOG_BYTES, 'Catalog exceeds 8 MiB.')
+    portal.bootstrap()
+    installed_package = installed(portal.get_json(PACKAGES), package, '--launchpass-package-full-name')
+    require(installed_package['PackageFamilyName'].casefold().startswith(identity.casefold() + '_') and
+            installed_package['PackageFullName'].casefold().startswith(identity.casefold() + '_'),
+            'LaunchPass package identity mismatch.')
+    current, previous = remote_catalog(portal, package)
+    action = 'unchanged' if current == catalog else 'create' if current is None else 'replace'
+    report = {'mode': 'dry-run', 'rom_writes': 0, 'catalog': {'action': action}, 'generated_catalog': catalog}
+    if not portal.apply_enabled or action == 'unchanged':
+        return report
+    if previous is not None:
+        require(backup is not None, 'Replacing the catalog requires --catalog-backup NEW_LOCAL_FILE.')
+        require(backup.suffix.casefold() == '.json', '--catalog-backup must be a new .json file.')
+        try:
+            with backup.open('xb') as output:
+                output.write(previous)
+        except OSError as error:
+            raise SyncError(f'Cannot create a NEW catalog backup: {error}') from None
+    _, latest = remote_catalog(portal, package)
+    require(latest == previous, 'Remote catalog changed after planning; refusing to overwrite it.')
+    portal.upload(package, 'LocalState', CATALOG, io.BytesIO(data), len(data))
+    after, _ = remote_catalog(portal, package)
+    require(after == catalog, 'Catalog read-back failed; preserve the backup and inspect LocalState.')
+    return dict(report, mode='applied')
+
+
 @dataclass
 class Plan:
     catalog: dict
@@ -869,19 +1076,27 @@ def stage_enrichment(portal, package, catalog, stage, apply, enrichment_python=N
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--rom-root', required=True, type=Path)
+    parser.add_argument('--rom-root', type=Path)
     parser.add_argument('--catalog', required=True, type=Path, help='Existing v1 manifest seed; never overwritten')
-    source = parser.add_mutually_exclusive_group(required=True)
+    operation = parser.add_mutually_exclusive_group()
+    operation.add_argument('--catalog-only', action='store_true', help='Offline generation only; never touches ROMs or Xbox')
+    operation.add_argument('--upload-catalog-only', action='store_true', help='Device Portal publication of only --catalog; no ROM transfer')
+    parser.add_argument('--xbox-rom-root', help='Explicit hardware-verified Windows ROM directory for --catalog-only')
+    parser.add_argument('--platform', default='arcade', help='Scanned platform for --catalog-only (default arcade)')
+    parser.add_argument('--mame-listxml', type=Path, help='Local MAME -listxml output for exact BIOS/device/parent classification')
+    parser.add_argument('--metadata-report', type=Path, help='Local arcade_artwork.py report for exact cached BIOS classification')
+    parser.add_argument('--catalog-backup', type=Path, help='NEW local backup required before replacing a catalog in upload-only mode')
+    source = parser.add_mutually_exclusive_group()
     source.add_argument('--url', help='Device Portal HTTPS origin; credentials are prompted, never arguments')
     source.add_argument('--snapshot', type=Path, help='Offline package/listing fixture; cannot be applied')
-    parser.add_argument('--retroarch-package-full-name', required=True)
-    parser.add_argument('--launchpass-package-full-name', required=True)
+    parser.add_argument('--retroarch-package-full-name')
+    parser.add_argument('--launchpass-package-full-name')
     parser.add_argument('--launchpass-identity', default=LAUNCHPASS_IDENTITY)
     parser.add_argument('--core', action='append', default=[], metavar='PLATFORM=DLL')
     parser.add_argument('--game-core', action='append', default=[], metavar='PLATFORM/ROM=DLL')
     parser.add_argument('--platform-dir', action='append', default=[], metavar='PLATFORM=RELATIVE_FOLDER',
                         help='Local platform folder relative to --rom-root. Use . for the root itself.')
-    parser.add_argument('--extensions', default=DEFAULT_EXTENSIONS, help='Comma-separated suffixes, or *')
+    parser.add_argument('--extensions', help='Comma-separated suffixes, or *; catalog-only defaults ZIP/7Z/CHD')
     parser.add_argument('--output', type=Path, help='Write generated manifest to a NEW local file (never clobber)')
     parser.add_argument('--enrich', action='store_true', help='Include ArcadeItalia metadata and artwork')
     parser.add_argument('--enrichment-dir', type=Path, help='Local artwork staging and cache directory')
@@ -900,16 +1115,69 @@ def main(argv=None):
     parser.add_argument('--timeout', type=float, default=60)
     args = parser.parse_args(argv)
     try:
+        if args.catalog_only:
+            require(args.rom_root is not None and args.xbox_rom_root is not None,
+                    '--catalog-only requires --rom-root and --xbox-rom-root.')
+            require(not any((args.url, args.snapshot, args.apply, args.enrich, args.enrichment_dir,
+                             args.enrichment_python, args.clean_loose_arcade_components, args.catalog_backup)),
+                    '--catalog-only is offline: no --url, --snapshot, --apply, enrichment or remote options.')
+            require(args.output is None or not args.output.resolve().is_relative_to(args.rom_root.resolve()),
+                    '--output must be outside the ROM collection.')
+            try:
+                require(args.catalog.stat().st_size <= MAX_CATALOG_BYTES, 'Seed catalog exceeds 8 MiB.')
+                seed = validate_catalog(read_json(args.catalog))
+                directories = pairs_arg(args.platform_dir, platform_folder)
+                require(len(directories) <= 1, '--catalog-only accepts at most one --platform-dir.')
+                require(all(pid.casefold() == args.platform.casefold() for pid in directories),
+                        '--catalog-only scans only --platform; other --platform-dir values are invalid.')
+                extensions = {value.strip().casefold() for value in (args.extensions or '.zip,.7z,.chd').split(',')}
+                require(extensions == {'*'} or all(re.fullmatch(r'\.[a-z0-9]+', value) for value in extensions), 'Invalid --extensions list.')
+                overrides = {}
+                for key, value in pairs_arg(args.game_core, core_name).items():
+                    key = relative(key).replace('\\', '/').casefold()
+                    require(key not in overrides, 'Duplicate normalized --game-core ROM path.')
+                    overrides[key] = value
+                evidence = offline_metadata(args.mame_listxml, args.metadata_report)
+                report = catalog_only_plan(seed, args.rom_root, args.xbox_rom_root, args.platform,
+                    next(iter(directories.values()), '.'), extensions, pairs_arg(args.core, core_name), overrides, evidence)
+                data = encode_catalog(report['generated_catalog'])
+                require(len(data) <= MAX_CATALOG_BYTES, 'Generated catalog exceeds 8 MiB.')
+                if args.output:
+                    with args.output.open('xb') as output:
+                        output.write(data)
+                report['output'] = str(args.output) if args.output else None
+                print(json.dumps(report, indent=2, ensure_ascii=True))
+                return 0
+            except OSError as error:
+                raise SyncError(f'Local catalog generation IO failed: {error}') from None
+        require(not any((args.xbox_rom_root, args.mame_listxml, args.metadata_report)),
+                '--xbox-rom-root, --mame-listxml and --metadata-report require --catalog-only.')
+        if args.upload_catalog_only:
+            require(args.url and args.launchpass_package_full_name and not args.snapshot,
+                    '--upload-catalog-only requires --url and --launchpass-package-full-name.')
+            require(not any((args.rom_root, args.enrich, args.enrichment_dir, args.enrichment_python,
+                             args.exclude_bios, args.clean_loose_arcade_components, args.output, args.core, args.game_core, args.platform_dir)),
+                    '--upload-catalog-only does not scan, enrich, generate or transfer ROMs.')
+        else:
+            require(args.rom_root is not None and args.retroarch_package_full_name and args.launchpass_package_full_name,
+                    'Synchronization requires --rom-root, --retroarch-package-full-name and --launchpass-package-full-name.')
+            require(args.url or args.snapshot, 'Synchronization requires --url or --snapshot.')
+            require(args.catalog_backup is None, '--catalog-backup requires --upload-catalog-only.')
         require(not (args.apply and args.snapshot), '--apply is forbidden with an offline snapshot.')
         require(args.enrich == (args.enrichment_dir is not None), 'Use --enrich and --enrichment-dir together.')
         require(args.enrich or args.enrichment_python is None, '--enrichment-python requires --enrich.')
-        require(args.enrich or not args.exclude_bios, '--exclude-bios requires --enrich.')
+        require(args.enrich or not args.exclude_bios, '--exclude-bios requires --enrich in synchronization mode.')
         require(not (args.enrich and args.snapshot), 'Enrichment requires a live Portal listing.')
         require(math.isfinite(args.timeout) and args.timeout > 0, 'Timeout must be positive and finite.')
         require(args.output is None or (not args.output.exists() and not args.output.is_symlink()), '--output must be a new local file.')
+        if args.upload_catalog_only:
+            require(args.catalog.stat().st_size <= MAX_CATALOG_BYTES, 'Catalog exceeds 8 MiB.')
         seed = validate_catalog(read_json(args.catalog))
+        if args.upload_catalog_only:
+            directories = {}
+        else:
+            directories = {p['id']: p['id'] for p in seed['platforms']}
         defaults = pairs_arg(args.core, core_name)
-        directories = {p['id']: p['id'] for p in seed['platforms']}
         for pid in defaults:
             identifier(pid)
             directories.setdefault(pid, pid)
@@ -921,7 +1189,7 @@ def main(argv=None):
             key = relative(key).replace('\\', '/').casefold()
             require(key not in overrides, 'Duplicate normalized --game-core ROM path.')
             overrides[key] = value
-        extensions = {e.casefold().strip() for e in args.extensions.split(',')}
+        extensions = {e.casefold().strip() for e in (args.extensions or DEFAULT_EXTENSIONS).split(',')}
         require(extensions == {'*'} or all(re.fullmatch(r'\.[a-z0-9]+', e) for e in extensions), 'Invalid --extensions list.')
         if args.snapshot:
             portal = SnapshotPortal(read_json(args.snapshot))
@@ -934,6 +1202,11 @@ def main(argv=None):
                                     password=password if password is not None else read_secret('Device Portal password (hidden): '), **kwargs)
             else:
                 portal = SyncPortal(args.url, cookie=read_secret('Device Portal Cookie header value (hidden): '), **kwargs)
+        if args.upload_catalog_only:
+            report = upload_catalog_only(portal, seed, args.launchpass_package_full_name,
+                                         args.launchpass_identity, args.catalog_backup)
+            print(json.dumps(report, indent=2, ensure_ascii=True))
+            return 0
         options = dict(seed=seed, root=args.rom_root, retroarch=args.retroarch_package_full_name,
                        launchpass=args.launchpass_package_full_name, identity=args.launchpass_identity,
                        defaults=defaults, overrides=overrides, platform_dirs=directories, extensions=extensions,

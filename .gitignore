@@ -356,3 +356,5 @@ RetroPass/Assets/Background/*.mp4
 
 .venv
 Builds/
+/mp3/
+/Music-Staging/
