@@ -9,7 +9,20 @@ using System.Text.RegularExpressions;
 
 namespace LaunchPass.Catalog
 {
-    // Presentation-only state. Catalog order and launch requests are never rewritten.
+    // Presentation order is independent of the JSON and never changes launch requests.
+    public static class CatalogPresentationOrder
+    {
+        public static IReadOnlyList<CatalogEntry> Sort(IEnumerable<CatalogEntry> entries)
+        {
+            if (entries == null) throw new ArgumentNullException(nameof(entries));
+            return entries.OrderBy(e => e.PlatformTitle, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(e => e.PlatformId, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(e => e.Title, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(e => e.Id, StringComparer.OrdinalIgnoreCase).ToList().AsReadOnly();
+        }
+    }
+
+    // Presentation-only state. Catalog data and launch requests are never rewritten.
     public sealed class PremiumSelection
     {
         private readonly List<List<CatalogEntry>> categories;
@@ -22,7 +35,7 @@ namespace LaunchPass.Catalog
         public PremiumSelection(IEnumerable<CatalogEntry> entries)
         {
             if (entries == null) throw new ArgumentNullException(nameof(entries));
-            categories = entries.GroupBy(e => e.PlatformId, StringComparer.OrdinalIgnoreCase).Select(g => g.ToList()).ToList();
+            categories = CatalogPresentationOrder.Sort(entries).GroupBy(e => e.PlatformId, StringComparer.OrdinalIgnoreCase).Select(g => g.ToList()).ToList();
             if (categories.Count > 0) Select(0);
         }
         public void Select(int index)

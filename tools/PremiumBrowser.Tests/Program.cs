@@ -17,7 +17,7 @@ class Program
         var entries = CatalogReader.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "example.json")));
         string[] protocols = entries.Select(e => e.Launch.ProtocolUri).ToArray();
         var state = new PremiumSelection(entries);
-        Check(state.CategoryCount == 3 && state.Current.Id == "arcade-1941", "initial category/game in catalog order");
+        Check(state.CategoryCount == 3 && state.Current.Id == "arcade-1941", "initial alphabetic category/game");
         state.MoveGame(-1); Check(state.SelectedIndex == 0, "clamp first");
         state.MoveGame(1); Check(state.Current.Id == "arcade-1942", "keyboard next");
         state.MoveGame(1); Check(state.Current.Id == "arcade-override", "controller next shares same selection");
@@ -41,6 +41,20 @@ class Program
         for (int i = 0; i < 100; i++) { Check(large.SelectedIndex == i, "100-game sequential wheel selection"); large.MoveGame(1); }
         Check(large.SelectedIndex == 99, "100-game wheel clamps at end");
         Check(entries.Select(e => e.Launch.ProtocolUri).SequenceEqual(protocols), "presentation never mutates launch data");
+        string unorderedJson = "{\"version\":1,\"contentRoot\":\"U:\\\\roms\",\"platforms\":[{\"id\":\"z\",\"title\":\"Zebra\",\"defaultCore\":\"mame.dll\"},{\"id\":\"a\",\"title\":\"Arcade\",\"defaultCore\":\"mame.dll\"}],\"games\":[{\"id\":\"zulu\",\"title\":\"Zulu\",\"platform\":\"z\",\"rom\":\"z.zip\"},{\"id\":\"beta\",\"title\":\"beta\",\"platform\":\"a\",\"rom\":\"b.zip\"},{\"id\":\"alpha-b\",\"title\":\"Alpha\",\"platform\":\"a\",\"rom\":\"ab.zip\"},{\"id\":\"alpha-a\",\"title\":\"alpha\",\"platform\":\"a\",\"rom\":\"aa.zip\"}]}";
+        var unordered = CatalogReader.Parse(unorderedJson);
+        string[] originalIds = unordered.Select(e => e.Id).ToArray();
+        string[] originalUris = unordered.Select(e => e.Launch.ProtocolUri).ToArray();
+        var sorted = CatalogPresentationOrder.Sort(unordered);
+        Check(sorted.Select(e => e.Id).SequenceEqual(new[] { "alpha-a", "alpha-b", "beta", "zulu" }), "category/title order ignores case and uses stable ID ties");
+        Check(CatalogPresentationOrder.Sort(unordered.Reverse()).Select(e => e.Id).SequenceEqual(sorted.Select(e => e.Id)), "JSON shuffle cannot change browsing order");
+        var orderedWheel = new PremiumSelection(unordered);
+        Check(orderedWheel.Current.Id == "alpha-a", "wheel starts at alphabetically first category and title");
+        orderedWheel.MoveGame(1); Check(orderedWheel.Current.Id == "alpha-b", "next follows sorted title order");
+        orderedWheel.MoveGame(1); Check(orderedWheel.Current.Id == "beta", "keyboard/controller next share alphabetical order");
+        orderedWheel.MoveCategory(1); Check(orderedWheel.Current.Id == "zulu", "categories alphabetical");
+        orderedWheel.MoveCategory(-1); Check(orderedWheel.Current.Id == "beta", "sorted category selection restored by ID");
+        Check(unordered.Select(e => e.Id).SequenceEqual(originalIds) && unordered.Select(e => e.Launch.ProtocolUri).SequenceEqual(originalUris), "ordering never changes parsed catalog or launch requests");
         var logo = PremiumArtwork.Candidates(entries[0], "logo");
         Check(logo[0] == @"Artwork\games\arcade-1941\logo.png" && logo[3] == @"Artwork\platforms\arcade\logo.png", "game then platform logo priority");
         Check(logo.Count == 6 && !logo.Contains(entries[0].Artwork), "legacy artwork is not mistaken for transparent logo");

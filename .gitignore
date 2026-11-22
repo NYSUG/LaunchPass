@@ -355,3 +355,4 @@ MigrationBackup/
 RetroPass/Assets/Background/*.mp4
 
 .venv
+Builds/

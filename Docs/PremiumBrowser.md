@@ -1,6 +1,6 @@
-# Milestone 3B.1 — Static premium browser
+# Premium browser — Milestones 3B.1–3B.3
 
-This opt-in presentation uses the existing internal catalog parser, game adapters, cabinet input configuration and GameDetailsPage.StartContent launch path. It adds no video, downloading, attract mode or custom animation. The existing library and external LaunchBox flow remain available.
+This opt-in presentation uses the existing internal catalog parser, game adapters, cabinet input configuration and GameDetailsPage.StartContent launch path. Milestone 3B.3 adds bounded local artwork caching and compositor motion; video, downloading and attract mode remain outside this frontend. The existing library and external LaunchBox flow remain available.
 
 ## Enable and recover
 
@@ -42,7 +42,7 @@ Recommended source assets:
 | Background | JPEG, 1920 × 1080 | Uniform fill/crop; decorative only |
 | Screenshot/flyer | PNG/JPEG; portrait or landscape | Uniform fit; original aspect ratio preserved |
 
-Use a portrait flyer as screenshot if it must remain entirely visible; backgrounds intentionally crop. Keep important artwork away from outer edges. Files over 30 MiB are skipped. Header dimensions determine a bounded proportional decode: background at most 1920 × 1080, hero logo 1000 × 400, screenshot 1000 × 800, wheel logo 600 × 160. Small sources are not upscaled during decode. Only the selected game's hero images and up to five neighboring wheel logos are retained. Requests are serialized and generation-checked; obsolete results cannot replace the current game. These are presentation bounds, not a console performance guarantee.
+Use a portrait flyer as screenshot if it must remain entirely visible; backgrounds intentionally crop. Keep important artwork away from outer edges. Files over 30 MiB are skipped. Header dimensions determine a bounded proportional decode: background at most 1920 × 1080, shared hero/wheel logo 1000 × 400 and screenshot 1000 × 800. Small sources are not upscaled during decode. The visible working set is the selected game and up to three wheel neighbors on each side; reusable decoded images are held in bounded LRU caches. Two prioritized worker slots and generation checks prevent obsolete results replacing current artwork. These are presentation bounds, not a console performance guarantee.
 
 ## Optional metadata
 
@@ -63,7 +63,7 @@ Year, manufacturer and genre are optional strings. Missing metadata is hidden. A
 - Xbox D-pad/left stick: same selection/category state as cabinet input. A/Menu: launch; B: library; Y: search. X retains session play-later marking; the count is shown in the status line. Premium's session play-later list is separate from the existing selector's session list.
 - Favorites/AddFavorite remain reserved through the existing cabinet adapter. No new physical key assumptions are introduced.
 
-The wheel is a virtualized ListView with explicit selection, larger selected logo/text, neon outline, focus on the selected container and centered BringIntoView requests. Preview handling consumes mapped cabinet/gamepad directions before native scrolling. Controller OriginalKey is used to avoid confusing translated gamepad keys with keyboard input. Directional repeat is bounded; Select/Back require a fresh press. Xbox controller repeat uses the existing gate with safe default timings; cabinet repeat still comes from CabinetInput.json.
+The wheel is a virtualized ListView with explicit selection, larger selected logo/text, neon outline, focus on the selected container and a centered viewport. Fixed-height rows use compositor translation/scale/opacity; native BringIntoView requests are suppressed in favor of explicit centering. Preview handling consumes mapped cabinet/gamepad directions before native scrolling. Controller OriginalKey is used to avoid confusing translated gamepad keys with keyboard input. Directional repeat is bounded; Select/Back require a fresh press. Xbox controller repeat uses the existing gate with safe default timings; cabinet repeat still comes from CabinetInput.json.
 
 Selection is held in one portable PremiumSelection object. Category selections and the current game ID are also saved best-effort to LocalSettings under PremiumBrowser.Category.<platform-id> and PremiumBrowser.SelectedGame. A restarted process restores valid IDs against the current catalog, ignoring removed games. Normal RetroArch activation retains the existing page. Settings-write failures only log; they cannot block launching.
 
@@ -105,7 +105,7 @@ The new test project requires its initial restore (existing cached dependencies 
 
 Test logs: build-logs/premium-browser-tests.log, premium-browser-Catalog-tests.log, premium-browser-CabinetInput-tests.log, premium-browser-UriGenerator-tests.log. Full build output and binlogs: build-logs/premium-browser-debug.log/.binlog and premium-browser-release.log/.binlog. The baseline preservation report is build-logs/premium-browser-preservation.json.
 
-Final validation on this NUC:
+Milestone 3B.1 validation on this NUC (historical):
 
 | Check | Result |
 | --- | --- |
@@ -119,3 +119,72 @@ Final validation on this NUC:
 Release XamlTypeInfo.g.cs contains `Activate_0_PremiumBrowserPage()` constructing the page, and the type's Activator assignment, consistent with existing compiled pages. Debug uses the existing reflection metadata provider; both configurations generate PremiumBrowserPage.g.cs and compiled wheel bindings. MakePRI inspection of the packaged resources.pri confirms Files/PremiumBrowserPage.xbf. No generated files were edited.
 
 Unsigned Release bundle: C:\TRANSFER\Premium-Browser\Release\LaunchPass_2.1.8.2_Test\LaunchPass_2.1.8.2_x64.msixbundle. Debug output is under Premium-Browser/Debug. No Xbox runtime behavior has been tested for this presentation yet.
+
+## Milestone 3B.3 — Performance and motion
+
+### Investigation
+
+The session baseline is saved under Builds/Milestone3B.3/Validation. The previous implementation constructed a new BitmapImage and decoded the same artwork on every selection. Hero and wheel logos used different decode sizes. It cleared all visible images before replacements were ready, which could expose the plain background. Neighbor loading ran serially after selected logo/background/screenshot loading; it was a small retained row window rather than a reusable cache. Generation checks already rejected stale results, but an in-progress obsolete request could delay current work. Every selection changed row heights and refreshed all row properties, forced UpdateLayout, and snapped ScrollIntoView. Category changes and page reactivation rebuilt wheel models; ordinary selections did not recreate the entire wheel.
+
+### Current loading policy
+
+ArtworkPerformance.cs in LaunchPass.Catalog contains the tested weighted LRU, latest-demand priority queue and interruption math. PremiumArtworkCache.cs owns UI-thread BitmapImage creation and physical-file decoding. PremiumBrowserMotion.cs connects those services to the existing page and input actions; it does not generate launch URIs or change catalog/schema logic.
+
+| Cache | Normal budget / entry cap | Under pressure |
+| --- | --- | --- |
+| Shared decoded hero/wheel logos | 12 MiB / 24 | 4 MiB / 8 |
+| Backgrounds | 18 MiB / 3 | 9 MiB / 1 |
+| Screenshots | 8 MiB / 4 | 4 MiB / 1 |
+
+The normal **38 MiB** and reduced **17 MiB** figures are decoded-pixel estimates (width × height × 4), not total process/GPU memory limits. Entry caps and byte caps both apply. Full 1080p backgrounds consume about 7.9 MiB each, so the normal background byte budget holds two at that maximum size. Old/new backgrounds during a crossfade, active decode buffers, UI-held images and framework/GPU allocations can exceed the reported cache bytes. Actual app usage/limit are included in diagnostics.
+
+The selected logo is requested immediately. Up to three logos before and after selection are prefetched nearest-first. Heavy visible assets start after a 90 ms dwell, except existing in-flight look-ahead is promoted immediately rather than canceled/restarted. Existing cached visible artwork is assigned immediately. After visible work and neighboring marquees, one likely next game in the most recent movement direction gets background/screenshot look-ahead; fetching six heavyweight neighbors would churn the tighter budgets. No full-catalog preload occurs.
+
+There are at most two worker slots. New demand cancels obsolete queued/active requests. Visible work preempts speculative decodes; still-wanted prefetch resumes afterward and retains its consumers. Concurrent equal requests share a task. Different requests resolving to the same physical file and decode profile also share the decoded object/active decode via consumer leases. One consumer's cancellation does not abort another consumer's still-needed decode. Missing/corrupt paths have a bounded 30-second negative cache. Every UI assignment checks the current generation and foreground/page state.
+
+Activation return keeps the existing selected-game state. Navigation away, launch, deactivation, background entry, suspension or a reduced memory limit cancels work and clears cached/visible image references. Static memory/lifecycle handlers are detached when leaving the page. High/over-limit memory pressure reduces budgets, suppresses all look-ahead and uses immediate background replacement rather than holding a second fade image. Normal limits/prefetch resume when memory is low or foreground activation permits it. No forced garbage collection or memory-limit increase is used.
+
+### Motion and focus
+
+Wheel rows now have a fixed 82-effective-pixel pitch. Header/footer spacing permits centered selection at the ends. Scroll offsets snap internally, while an independent compositor Translation compensates the position and eases it to zero over **150 ms**. The interruption model carries the current visual offset into a new transition; there is no animation queue. Large jumps are capped to two row pitches. Selected marquee scale/opacity is 1/1; neighboring entries progressively reduce to 0.86/0.82, 0.75/0.63 and 0.68/0.45. No Width/Height/layout animation or per-input UpdateLayout is used.
+
+The existing ListView, shared selected-game state, cabinet adapter and gamepad action paths remain. Selected containers retain real focus; unrealized containers receive focus after layout rather than forcing layout synchronously. Images are decorative and add no focus targets. Category changes reuse models when the category is unchanged, and reset motion when replacing the category.
+
+Two background layers crossfade over **230 ms**. The prior background remains until a current result is ready. A running fade completes without replacing its source midway; at most one latest replacement is retained, and a newer selection discards any older pending replacement. Screenshots load independently. Missing images retain the existing text/gradient fallbacks. There is no blur, video or attract loop.
+
+### Opt-in performance capture
+
+Create an empty **LaunchPass LocalState/PerformanceDiagnostics.enabled** file, then restart or re-enter the premium page. A small noninteractive panel appears below the existing input diagnostics. Retrieve **LocalState/Performance.log** and **Performance.previous.log** through Device Portal File Explorer. Remove the marker and restart to disable. No diagnostic marker is required for caching/motion itself.
+
+Sampling is every two seconds; disk appends run off the UI thread. Logs rotate at approximately 256 KiB, with one previous file. Errors in the diagnostic path do not block navigation/startup. Fields include current game/foreground state, last release reason, cache lookup hits/misses by role, entry/eviction counts, approximate bytes/budget, completed load/decode average and maximum decode duration, queue occupancy, deduplicated/canceled/preempted jobs, prefetch requests/failures, ignored stale results and actual MemoryManager usage/limit.
+
+Logo/background/screenshot latency is measured from selection to the **first current image assignment or fade start**, not a GPU-present timestamp. `-1` means no real image was assigned for that selection. Cache hits may measure 0 ms. Prefetch counts are logical requests (including cache hits/coalesced phases); decode count is physical completed decodes. H/M counters are cache lookups, including candidate/fallback lookups. Missing paths are not classified as corrupt decode failures. Canceled/ignored counters can rise during normal rapid navigation and should not be interpreted as crashes.
+
+### Hardware measurement checklist
+
+1. Cold-start with the 99-game catalog and diagnostics enabled. Wait for the first game to settle, then step down slowly, pause, reverse and compare cache H/M, decode count, artwork assignment latency and actual memory usage. Repeat the same range to measure warm behavior.
+2. Hold Down/Up and reverse direction rapidly. Confirm uninterrupted 150 ms wheel motion, stable selected outline/focus and latest matching logo/title/screenshot. Release the joystick; the last selected game must settle and neighbors should finish prefetching.
+3. Pause, then advance one game in the last movement direction: background/screenshot look-ahead should produce hits when completed. Browse all 99 games; cache bytes and entry counts must remain within caps rather than grow with catalog size. Run for 10–15 minutes and inspect actual process memory for a plateau; cache estimates alone are insufficient.
+4. Observe cold/missing/corrupt artwork and category switches, long titles, viewport ends, search/B/Back, controller D-pad/stick and the established X-Arcade mappings. Check no blank flash or late wrong-game assignment. Verify initial/restored off-screen selection is centered and focused after virtualization.
+5. Launch several games immediately while artwork is loading, hold Select through the transition, quit RetroArch, and verify correct selection/return without relaunch. Check logs after return show cleared/repopulated caches and renewed prefetch, not a permanently reduced background policy.
+6. Where feasible observe memory-pressure/reduced-limit behavior. Confirm foreground frames still respond, cache references are released when leaving, and normal prefetch resumes on return. Review the optional diagnostics panel's TV-safe layout with InputDiagnostics enabled/disabled.
+
+The host tests cannot measure Xbox GPU upload/present time, disk latency, compositor scheduling, actual memory pressure or focus virtualization. These remain hardware acceptance work; no Xbox performance numbers are claimed by a successful desktop build.
+
+Current outputs/logs are under **Builds/Milestone3B.3/Debug**, **Builds/Milestone3B.3/Release**, and **Builds/Milestone3B.3/Validation**. Source package version stays 2.1.8.4 for this implementation task; a future update over the existing different 2.1.8.4 package needs a separately prepared higher revision. Nothing in this milestone is signed, deployed or committed.
+
+Final Milestone 3B.3 host validation:
+
+| Check | Result |
+| --- | --- |
+| New cache/priority/cancellation/motion suite | 490 assertions passed |
+| Existing presentation suite | 326 passed |
+| Existing catalog suite | 55 passed |
+| Existing cabinet input suite | 126 passed |
+| Existing URI generator suite | 256 passed |
+| Debug x64 | Passed; 12 existing warnings, 0 errors; 23.39s |
+| Release x64/.NET Native | Passed; 12 existing warnings, 0 errors; 3m09.13s |
+
+Release constructor activation metadata and packaged PremiumBrowserPage.xbf were confirmed. The unsigned bundle and all five embedded packages passed block-map hash checks. Existing catalog/URI/input/probe/startup/manifest sources match the session baseline; the previous uncommitted splash/alphabetical-navigation changes were preserved. Application sources were frozen and checked against the final build snapshot. Detailed logs/binlogs, baseline/final hashes, final test outputs and the preservation/results record are in Validation.
+
+New source files for 3B.3: LaunchPass.Catalog/ArtworkPerformance.cs; LaunchPass/PremiumArtworkCache.cs; LaunchPass/PremiumBrowserMotion.cs; LaunchPass/PremiumPerformanceDiagnostics.cs; tools/ArtworkPerformance.Tests/Program.cs and its project. Existing files changed for this milestone: PremiumBrowserPage.xaml, its code-behind, LaunchPass.csproj and this guide. No other application behavior or source was intentionally changed.

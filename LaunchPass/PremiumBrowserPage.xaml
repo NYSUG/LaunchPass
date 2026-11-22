@@ -7,7 +7,7 @@
     <Page.Resources>
         <DataTemplate x:Key="WheelTemplate" x:DataType="local:PremiumWheelItem">
             <Border BorderBrush="{x:Bind Outline, Mode=OneWay}" BorderThickness="3" Background="{x:Bind Fill, Mode=OneWay}" CornerRadius="5">
-            <Grid Height="{x:Bind ItemHeight, Mode=OneWay}" Padding="12,6">
+            <Grid Height="70" Padding="12,6">
                 <TextBlock Text="{x:Bind Title, Mode=OneWay}" FontSize="{x:Bind TitleSize, Mode=OneWay}" FontWeight="SemiBold"
                            Foreground="White" TextWrapping="Wrap" VerticalAlignment="Center"
                            Visibility="{x:Bind TitleVisibility, Mode=OneWay}" />
@@ -18,13 +18,15 @@
         <Style x:Key="WheelContainer" TargetType="ListViewItem">
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="Padding" Value="0" />
-            <Setter Property="Margin" Value="0,3" />
-            <Setter Property="BorderThickness" Value="3" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Height" Value="82" />
+            <Setter Property="BorderThickness" Value="0" />
         </Style>
     </Page.Resources>
     <Grid x:Name="PremiumRoot">
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Grid>
@@ -34,7 +36,12 @@
                     <GradientStop Color="#080D18" Offset="1" />
                 </LinearGradientBrush>
             </Grid.Background>
-            <Image x:Name="Backdrop" Stretch="UniformToFill" Opacity="0.45" />
+            <Grid x:Name="BackgroundLayerA">
+                <Image x:Name="Backdrop" Stretch="UniformToFill" Opacity="0.45" />
+            </Grid>
+            <Grid x:Name="BackgroundLayerB" Opacity="0">
+                <Image x:Name="BackdropNext" Stretch="UniformToFill" Opacity="0.45" />
+            </Grid>
             <Rectangle IsHitTestVisible="False">
                 <Rectangle.Fill>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
@@ -82,6 +89,11 @@
                               SelectionChanged="Wheel_SelectionChanged" ItemClick="Wheel_ItemClick"
                               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                               ScrollViewer.VerticalScrollBarVisibility="Hidden">
+                        <ListView.Header><Border x:Name="WheelTopSpacer" /></ListView.Header>
+                        <ListView.Footer><Border x:Name="WheelBottomSpacer" /></ListView.Footer>
+                        <ListView.ItemsPanel>
+                            <ItemsPanelTemplate><ItemsStackPanel Orientation="Vertical" CacheLength="1" /></ItemsPanelTemplate>
+                        </ListView.ItemsPanel>
                         <ListView.Resources>
                             <SolidColorBrush x:Key="ListViewItemBackgroundSelected" Color="#244F67" />
                             <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="#244F67" />
@@ -95,5 +107,7 @@
                 </StackPanel>
             </Grid>
         </Grid>
+        <TextBlock x:Name="PerformanceText" Grid.Row="2" Visibility="Collapsed" IsHitTestVisible="False"
+                   FontSize="12" MaxHeight="64" TextWrapping="Wrap" Foreground="#73E1F5" Margin="48,0,48,4" />
     </Grid>
 </Page>

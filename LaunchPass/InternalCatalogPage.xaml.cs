@@ -99,9 +99,9 @@ namespace RetroPass
                 StartupLog.Write("Catalog JSON: read begin");
                 string json = await FileIO.ReadTextAsync(file);
                 StartupLog.Write("Catalog JSON: parse begin; characters=" + json.Length);
-                var entries = CatalogReader.Parse(json);
+                var entries = CatalogPresentationOrder.Sort(CatalogReader.Parse(json));
                 StartupLog.Write("Catalog JSON: parse complete; games=" + entries.Count);
-                foreach (var group in entries.GroupBy(e => e.PlatformId))
+                foreach (var group in entries.GroupBy(e => e.PlatformId, StringComparer.OrdinalIgnoreCase))
                 {
                     var platform = new Platform { Name = group.First().PlatformTitle, EmulatorType = Platform.EEmulatorType.retroarch };
                     var playlist = new Playlist { Name = platform.Name };

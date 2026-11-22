@@ -23,14 +23,13 @@ namespace RetroPass
         public string Title => Entry.Title;
         private BitmapImage logo;
         private bool selected;
-        public BitmapImage Logo { get => logo; set { logo = value; Changed(nameof(Logo)); Changed(nameof(TitleVisibility)); } }
+        public BitmapImage Logo { get => logo; set { if (ReferenceEquals(logo, value)) return; logo = value; Changed(nameof(Logo)); Changed(nameof(TitleVisibility)); } }
         public Visibility TitleVisibility => logo == null ? Visibility.Visible : Visibility.Collapsed;
-        public double ItemHeight => selected ? 92 : 58;
-        public double TitleSize => selected ? 23 : 17;
+        public double TitleSize => 23;
         public Brush Outline => new SolidColorBrush(selected ? Windows.UI.Color.FromArgb(255, 115, 225, 245) : Windows.UI.Colors.Transparent);
         public Brush Fill => new SolidColorBrush(selected ? Windows.UI.Color.FromArgb(220, 30, 64, 85) : Windows.UI.Colors.Transparent);
         public PremiumWheelItem(CatalogEntry entry) { Entry = entry; }
-        public void Select(bool value) { selected = value; Changed(nameof(ItemHeight)); Changed(nameof(TitleSize)); Changed(nameof(Outline)); Changed(nameof(Fill)); }
+        public void Select(bool value) { if (selected == value) return; selected = value; Changed(nameof(Outline)); Changed(nameof(Fill)); }
         public event PropertyChangedEventHandler PropertyChanged;
         private void Changed(string property) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
     }
@@ -46,13 +45,14 @@ namespace RetroPass
         private readonly CabinetInputMap gamepadTiming = CabinetInputMap.Defaults();
         private readonly System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
         private IDisposable cabinetInput;
-        private bool active, loading, syncing, launching, searching, artworkRunning, artworkPending;
+        private bool active, loading, syncing, launching, searching;
         private int generation;
 
         public PremiumBrowserPage()
         {
             StartupLog.Write("Premium browser: constructor entered");
             InitializeComponent();
+            InitializePresentation();
             AddHandler(UIElement.PreviewKeyDownEvent, new KeyEventHandler(GamepadDown), true);
             AddHandler(UIElement.PreviewKeyUpEvent, new KeyEventHandler(GamepadUp), true);
             Loaded += PageLoaded;
@@ -66,16 +66,17 @@ namespace RetroPass
             cabinetInput = CabinetInput.Attach(this, HandleAction);
             SystemNavigationManager.GetForCurrentView().BackRequested += BackRequested;
             Window.Current.Activated += WindowActivated;
+            StartPresentation();
             if (selection != null) RenderCategory();
         }
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
-            active = false; generation++; artworkPending = false;
+            active = false;
             cabinetInput?.Dispose(); cabinetInput = null;
             SystemNavigationManager.GetForCurrentView().BackRequested -= BackRequested;
             Window.Current.Activated -= WindowActivated;
             gamepadGate.Reset();
-            ClearArtwork();
+            StopPresentation();
             base.OnNavigatedFrom(e);
         }
         private async void PageLoaded(object sender, RoutedEventArgs e)
@@ -83,13 +84,15 @@ namespace RetroPass
             try
             {
                 await InputDiagnostics.RefreshAsync(PremiumRoot);
+                await performance.RefreshAsync();
+                if (!active) { performance.Stop(); return; }
                 if (selection != null) { RenderCategory(); return; }
                 if (loading) return;
                 loading = true;
                 games.Clear();
                 StartupLog.Write("Premium browser: catalog read begin");
                 var file = await ApplicationData.Current.LocalFolder.GetFileAsync("InternalCatalog.json");
-                var entries = CatalogReader.Parse(await FileIO.ReadTextAsync(file));
+                var entries = CatalogPresentationOrder.Sort(CatalogReader.Parse(await FileIO.ReadTextAsync(file)));
                 foreach (var group in entries.GroupBy(entry => entry.PlatformId, StringComparer.OrdinalIgnoreCase))
                 {
                     var platform = new Platform { Name = group.First().PlatformTitle, EmulatorType = Platform.EEmulatorType.retroarch };
@@ -134,8 +137,12 @@ namespace RetroPass
         {
             if (!active || selection == null) return;
             syncing = true;
-            rows = selection.Games.Select(entry => new PremiumWheelItem(entry)).ToList();
-            Wheel.ItemsSource = rows;
+            if (rows.Count == 0 || !string.Equals(rows[0].Entry.PlatformId, selection.Current?.PlatformId, StringComparison.OrdinalIgnoreCase))
+            {
+                rows = selection.Games.Select(entry => new PremiumWheelItem(entry)).ToList();
+                Wheel.ItemsSource = rows;
+                ResetWheelMotion();
+            }
             syncing = false;
             RenderSelection();
         }
@@ -159,26 +166,13 @@ namespace RetroPass
             PremiumMetadata info;
             MetadataText.Text = metadata.TryGetValue(entry.Id, out info) ? string.Join("  ·  ", new[] { info.Year, info.Manufacturer, info.Genre }.Where(s => !string.IsNullOrWhiteSpace(s))) : "";
             StatusText.Text = "Ready · Y / configured Search opens search";
-            generation++;
-            ClearArtwork();
-            // Retain only nearby wheel logos; large catalogs do not accumulate decoded images.
-            for (int i = 0; i < rows.Count; i++) if (Math.Abs(i - selection.SelectedIndex) > 2) rows[i].Logo = null;
+            for (int i = 0; i < rows.Count; i++) if (Math.Abs(i - selection.SelectedIndex) > 3 || (pressure && i != selection.SelectedIndex)) rows[i].Logo = null;
             FocusSelection();
-            artworkPending = true;
-            if (!artworkRunning) LoadArtwork();
+            RequestArtwork();
         }
         private void FocusSelection()
         {
-            if (Wheel.SelectedItem == null) return;
-            Wheel.ScrollIntoView(Wheel.SelectedItem, ScrollIntoViewAlignment.Default);
-            Wheel.UpdateLayout();
-            var container = Wheel.ContainerFromIndex(Wheel.SelectedIndex) as ListViewItem;
-            if (container != null)
-            {
-                container.Focus(FocusState.Programmatic);
-                container.StartBringIntoView(new BringIntoViewOptions { VerticalAlignmentRatio = 0.5 });
-            }
-            else Wheel.Focus(FocusState.Programmatic);
+            CenterWheel();
         }
         private void Wheel_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -201,6 +195,7 @@ namespace RetroPass
                 if (action == CabinetAction.Select)
                 {
                     launching = true;
+                    ReleaseArtwork("launch");
                     try { await GameDetailsPage.StartContent(games[selection.Current.Id]); }
                     finally { launching = false; }
                     return;
@@ -246,7 +241,9 @@ namespace RetroPass
         }
         private void WindowActivated(object sender, WindowActivatedEventArgs e)
         {
-            if (e.WindowActivationState == CoreWindowActivationState.Deactivated) { gamepadGate.Reset(); generation++; artworkPending = false; ClearArtwork(); }
+            foreground = e.WindowActivationState != CoreWindowActivationState.Deactivated;
+            if (foreground) RefreshMemoryPolicy();
+            if (!foreground) { gamepadGate.Reset(); ReleaseArtwork("deactivated"); }
             else if (active && selection != null && !searching) RenderSelection();
         }
         private static bool GamepadAction(VirtualKey key, out CabinetAction action)
@@ -295,68 +292,6 @@ namespace RetroPass
         {
             while (node != null) { if (node is ContentDialog) return true; node = VisualTreeHelper.GetParent(node); }
             return false;
-        }
-        private void ClearArtwork()
-        {
-            Backdrop.Source = HeroLogo.Source = Screenshot.Source = null;
-            HeroTitle.Visibility = ScreenshotFallback.Visibility = Visibility.Visible;
-        }
-        private async void LoadArtwork()
-        {
-            artworkRunning = true;
-            try
-            {
-                while (artworkPending && active)
-                {
-                    artworkPending = false;
-                    int version = generation;
-                    var entry = selection.Current;
-                    var logo = await ReadArtwork(entry, "logo", 1000, version);
-                    if (version != generation) continue;
-                    HeroLogo.Source = logo; HeroTitle.Visibility = logo == null ? Visibility.Visible : Visibility.Collapsed;
-                    var background = await ReadArtwork(entry, "background", 1920, version);
-                    if (version != generation) continue;
-                    Backdrop.Source = background;
-                    var screenshot = await ReadArtwork(entry, "screenshot", 1000, version);
-                    if (version != generation) continue;
-                    Screenshot.Source = screenshot; ScreenshotFallback.Visibility = screenshot == null ? Visibility.Visible : Visibility.Collapsed;
-                    foreach (var row in rows.Where((item, index) => Math.Abs(index - selection.SelectedIndex) <= 2).ToArray())
-                    {
-                        var wheelLogo = await ReadArtwork(row.Entry, "logo", 600, version);
-                        if (version != generation) break;
-                        row.Logo = wheelLogo;
-                    }
-                }
-            }
-            catch (Exception ex) { StartupLog.Write("Premium browser: artwork fallback: " + ex.Message); }
-            finally { artworkRunning = false; }
-        }
-        private async Task<BitmapImage> ReadArtwork(CatalogEntry entry, string role, int width, int version)
-        {
-            foreach (string path in PremiumArtwork.Candidates(entry, role))
-            {
-                if (version != generation || !active) return null;
-                try
-                {
-                    var file = await ApplicationData.Current.LocalFolder.GetFileAsync(path);
-                    using (var stream = await file.OpenReadAsync())
-                    {
-                        if (stream.Size > 30 * 1024 * 1024) throw new InvalidOperationException("Artwork exceeds 30 MiB file limit.");
-                        var decoder = await BitmapDecoder.CreateAsync(stream);
-                        int height = role == "background" ? 1080 : role == "screenshot" ? 800 : width == 600 ? 160 : 400;
-                        double scale = Math.Min(1, Math.Min((double)width / decoder.PixelWidth, (double)height / decoder.PixelHeight));
-                        int decodeWidth = Math.Max(1, (int)(decoder.PixelWidth * scale));
-                        stream.Seek(0);
-                        var image = new BitmapImage { DecodePixelType = DecodePixelType.Physical, DecodePixelWidth = decodeWidth };
-                        await image.SetSourceAsync(stream);
-                        return version == generation ? image : null;
-                    }
-                }
-                catch (System.IO.FileNotFoundException) { }
-                catch (System.IO.DirectoryNotFoundException) { }
-                catch (Exception ex) { StartupLog.Write("Premium browser: unusable " + role + " " + path + ": " + ex.Message); }
-            }
-            return null;
         }
     }
 }

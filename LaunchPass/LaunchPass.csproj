@@ -148,6 +148,9 @@
     <Compile Include="InternalCatalog.cs" />
     <Compile Include="InputDiagnostics.cs" />
     <Compile Include="CabinetInput.cs" />
+    <Compile Include="PremiumArtworkCache.cs" />
+    <Compile Include="PremiumBrowserMotion.cs" />
+    <Compile Include="PremiumPerformanceDiagnostics.cs" />
     <Compile Include="InternalCatalogPage.xaml.cs">
       <DependentUpon>InternalCatalogPage.xaml</DependentUpon>
     </Compile>
