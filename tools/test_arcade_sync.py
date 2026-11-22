@@ -343,6 +343,16 @@ class SyncTests(unittest.TestCase):
             self.plan()
         self.assertEqual(self.device.posts, [])
 
+    def test_package_lookup_identifies_missing_or_ambiguous_argument(self):
+        for option in ('retroarch', 'launchpass'):
+            with self.subTest(option=option), self.assertRaisesRegex(
+                    sync.SyncError, f"--{option}-package-full-name 'Old_1' did not match"):
+                sync.build_plan(self.portal, **dict(self.options, **{option: 'Old_1'}))
+        self.device.packages['InstalledPackages'].append(self.device.packages['InstalledPackages'][1])
+        with self.assertRaisesRegex(sync.SyncError, '--launchpass-package-full-name.*matched multiple'):
+            self.plan()
+        self.assertEqual(self.device.posts, [])
+
     def test_malformed_listing_fails_closed(self):
         invalid = [{}, {'Items': None}, {'Items': [None]}, {'Items': [{'Name': '../evil', 'FileSize': 4, 'Type': 32}]},
                    {'Items': [{'Name': 'file.zip', 'Type': 32}]}, {'Items': [{'Name': 'file.zip', 'Type': 'File', 'FileSize': 1}]},
@@ -531,6 +541,30 @@ class SyncTests(unittest.TestCase):
         self.options['seed']['games'][1]['title'] = 'A different human title'
         with self.assertRaisesRegex(sync.SyncError, "field 'title'"):
             self.plan()
+
+    def test_enrichment_updates_previously_imported_mame_titles(self):
+        original = self.plan().catalog
+        self.options.update(seed=original, prefer_named_arcade_games=True)
+        remote = copy.deepcopy(original)
+        raw = 'Armored Warriors (Europe 941024)'
+        remote['games'][1]['title'] = raw
+        self.device.files[LP, 'LocalState'][sync.CATALOG] = sync.encode_catalog(remote)
+        plan = self.plan()
+        game_id = remote['games'][1]['id']
+        enrichment = {'games': [{'id': game_id, 'status': 'matched', 'metadata': {'title': raw}}]}
+        report = sync.build_publication_report(plan, enrichment)
+        self.assertEqual(report['generated_catalog']['games'][1]['title'], 'Armored Warriors')
+        self.assertEqual(report['catalog']['enriched_title_game_ids'], [game_id])
+        for old, expected in (
+                ('Alien vs. Predator (Europe 940520)', 'Alien vs. Predator'),
+                ("JoJo's Bizarre Adventure (Euro 990927, NO CD)", "JoJo's Bizarre Adventure"),
+                ('Mortal Kombat (rev 5.0 T-Unit 03/19/93)', 'Mortal Kombat'),
+                ('Altered Beast (set 8) (8751 317-0078)', 'Altered Beast'),
+                ('Double Dragon (Neo-Geo) (World)', 'Double Dragon (Neo-Geo)'),
+                ('Game (World of Light)', 'Game (World of Light)'),
+                ('Game (Version of Tomorrow)', 'Game (Version of Tomorrow)')):
+            with self.subTest(title=old):
+                self.assertEqual(sync.friendly_arcade_title(old), expected)
 
     def test_excluding_bios_removes_catalog_entry_but_still_uploads_archive(self):
         existing = self.plan().catalog

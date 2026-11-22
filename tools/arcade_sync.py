@@ -235,11 +235,12 @@ def strict_listing(payload):
     return entries
 
 
-def installed(payload, full_name):
+def installed(payload, full_name, flag):
     items = payload.get('InstalledPackages') if isinstance(payload, dict) else None
     require(isinstance(items, list) and all(isinstance(p, dict) for p in items), 'Malformed installed-package response.')
     matches = [p for p in items if p.get('PackageFullName') == full_name]
-    require(len(matches) == 1, 'Requested package is not installed or is ambiguous.')
+    require(matches, f'{flag} {full_name!a} did not match an installed PackageFullName.')
+    require(len(matches) == 1, f'{flag} {full_name!a} matched multiple installed packages.')
     family = matches[0].get('PackageFamilyName')
     require(isinstance(family, str) and relative(family) == family and '\\' not in family,
             'Installed package has no valid PackageFamilyName.')
@@ -515,7 +516,8 @@ def build_plan(portal, seed, root, retroarch, launchpass, identity, defaults, ov
                prefer_named_arcade_games=False):
     portal.bootstrap()
     payload = portal.get_json(PACKAGES)
-    ra, lp = installed(payload, retroarch), installed(payload, launchpass)
+    ra = installed(payload, retroarch, '--retroarch-package-full-name')
+    lp = installed(payload, launchpass, '--launchpass-package-full-name')
     require(retroarch != launchpass and ra['PackageFamilyName'].casefold() != lp['PackageFamilyName'].casefold(),
             'RetroArch and LaunchPass must be different installed packages.')
     identity_prefix = identity.casefold() + '_'
@@ -635,6 +637,34 @@ def loose_arcade_components(catalog, roms):
     return components
 
 
+MAME_TITLE_SUFFIX = re.compile(r'''
+    (?:
+        (?:World|Euro(?:pe)?|USA?|Japan|Asia|Korea|Hong\s+Kong|Taiwan|Canada|Australia|Brazil)
+        (?:
+            \s+\d{6}(?:,\s*NO\s+CD)?
+            | \s*[,/]\s*(?:set\s+\w+|old(?:er)?|new(?:er)?|rev(?:ision)?\s+\w+
+                             |(?:B-Board|[A-Z0-9]+[ /]Ver\.)\s*[\w.-]+)
+            | \s+set\s+\w+
+            | (?:\s*[/+]\s*(?:World|Euro(?:pe)?|USA?|Japan|Asia|Korea|Hong\s+Kong|Taiwan|Canada|Australia|Brazil))+
+        )?
+        | [JUEAT]{2,5}\s+\d{6}(?:\s+V\d+(?:\.\d+)*)?
+        | (?:rev(?:ision)?|ver(?:sion)?)\.?\s+
+          (?:[A-Z0-9.]*\d[A-Z0-9.]*|[A-Z]|(?-i:[A-Z]{3,4}))(?:[ ,][^()]*)?
+        | v\d+(?:\.\d+)+
+        | set\s+\d+
+        | (?:N[GD][MH]|DE[MH])-\d+(?:\s*~\s*(?:N[GD][MH]|DE[MH])-\d+)?
+        | (?:newer|older)\s+hardware
+        | \d{4}\s+\d{3}-\d{4}
+    )
+''', re.IGNORECASE | re.VERBOSE)
+
+
+def friendly_arcade_title(title):
+    while (match := re.fullmatch(r'(.+?)\s+\(([^()]*)\)', title)) and MAME_TITLE_SUFFIX.fullmatch(match[2]):
+        title = match[1]
+    return title
+
+
 def build_publication_report(plan, enrichment=None, exclude_bios=False, clean_loose_components=False):
     report = copy.deepcopy(plan.report)
     catalog = report['generated_catalog']
@@ -662,14 +692,14 @@ def build_publication_report(plan, enrichment=None, exclude_bios=False, clean_lo
               for item in games if item['status'] == 'matched'}
     renamed = []
     for game in catalog['games']:
-        if not has_archive_stem_title(game):
-            continue
         title = titles.get(game['id'])
         try:
             text(title)
         except SyncError:
             continue
-        title = title.strip()
+        if not has_archive_stem_title(game) and game['title'] != title.strip():
+            continue
+        title = friendly_arcade_title(title.strip())
         if game['title'] != title:
             game['title'] = title
             renamed.append(game['id'])
