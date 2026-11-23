@@ -128,5 +128,13 @@
         <Grid x:Name="StartupOverlay" Grid.RowSpan="3" Visibility="Collapsed" Background="#101522">
             <Image x:Name="StartupEntrance" Stretch="UniformToFill" />
         </Grid>
+        <Grid x:Name="LaunchOverlay" Grid.RowSpan="3" Visibility="Collapsed" Background="#101522">
+            <Image x:Name="LaunchEntrance" Stretch="UniformToFill" />
+            <Rectangle Fill="#80000000" />
+            <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="48,48,48,64" MaxWidth="900">
+                <TextBlock Text="LOADING…" Foreground="#FF9A3D" FontSize="36" FontWeight="SemiBold" TextAlignment="Center" />
+                <TextBlock x:Name="LaunchTitle" Foreground="#F4F5ED" FontSize="24" TextWrapping="Wrap" TextAlignment="Center" Margin="0,12,0,0" />
+            </StackPanel>
+        </Grid>
     </Grid>
 </Page>

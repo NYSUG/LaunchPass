@@ -72,6 +72,29 @@ class Program
         Check(PremiumMetadataDocument.Parse("{\"version\":1,\"games\":[{\"id\":\"arcade-1941\"}]}")["arcade-1941"].Year == null, "metadata fields optional");
         Check(PremiumMetadataDocument.Parse("{\"version\":1,\"games\":[]}").Count == 0, "empty sidecar allowed");
         foreach (string json in new[] { "{}", "null", "{\"version\":2,\"games\":[]}", "{\"version\":1,\"games\":[null]}", "{\"version\":1,\"games\":[{\"id\":\"../bad\"}]}", "{\"version\":1,\"games\":[{\"id\":\"a\"},{\"id\":\"A\"}]}", "{\"version\":1,\"games\":[]} {}" }) Bad(() => PremiumMetadataDocument.Parse(json), "invalid metadata: " + json);
+        var many = CatalogReader.Parse(System.Text.Json.JsonSerializer.Serialize(new {
+            version = 1, contentRoot = @"D:\DevelopmentFiles\roms\arcade",
+            platforms = new[] { new { id="arcade", title="Arcade", defaultCore="mame2003_plus_libretro.dll" } },
+            games = Enumerable.Range(0,99).Select(i => new { id="g"+i, title="Game "+i.ToString("D3"), platform="arcade", rom=i+".zip" })
+        }));
+        var restored = new PremiumSelection(many);
+        Check(restored.SelectGame("g80") && restored.SelectedIndex == 80, "restore offscreen selection in 99-game catalog");
+        restored.MoveGame(-1); Check(restored.Current.Id == "g79", "first Up uses restored model selection");
+        restored.MoveGame(1); Check(restored.Current.Id == "g80", "first Down stays consistent with restored selection");
+        restored.MoveCategory(1); Check(restored.Current.Id == "g80", "single-category refresh does not change restored game");
+        var cover = new PremiumLaunchCover();
+        cover.Begin(0); Check(cover.Active && !cover.Departed, "cover before artwork release");
+        Check(!cover.Return() && cover.Active, "ordinary activation does not uncover a pending launch");
+        cover.ActivationCompleted(true); Check(cover.Active, "URI acceptance alone keeps cover visible");
+        Check(!cover.Expire(9999,true) && cover.Active, "no premature launch timeout");
+        cover.Leave(); Check(cover.Departed && cover.Active, "cover remains behind RetroArch");
+        Check(!cover.Expire(60000,false) && cover.Active, "background does not time out cover");
+        Check(cover.Return() && !cover.Active && !cover.Departed, "return dismisses cover");
+        Check(!cover.Return(), "duplicate return harmless");
+        cover.Begin(100); cover.ActivationCompleted(false); Check(!cover.Active, "failed activation restores browser");
+        cover.Begin(100); Check(cover.Expire(10100,true) && !cover.Active, "no-departure timeout recovers browser");
+        cover.Begin(0); cover.Leave(); cover.Begin(500); Check(!cover.Departed && cover.Active, "fresh launch does not inherit departure");
+        cover.Cancel(); Check(!cover.Active, "exception or page navigation cancels cover");
         Console.WriteLine("PASS: " + checks + " premium browser assertions");
     }
 }

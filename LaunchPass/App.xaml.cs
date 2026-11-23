@@ -159,6 +159,8 @@ namespace RetroPass
                 return;
             }
 
+            if (protocol != null && protocol.Uri.Scheme.Equals("launchpass", StringComparison.OrdinalIgnoreCase))
+                await GameCoreService.Current.ObserveAsync(false, true);
             if (await TryShowInternalCatalog())
             {
                 base.OnActivated(args);

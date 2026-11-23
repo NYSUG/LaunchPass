@@ -29,17 +29,27 @@ namespace RetroPass
             if (launching) return;
             launching = true;
             bool accepted = false;
+            string attempt = null;
             try
             {
+                var prepared = await GameCoreService.Current.PrepareAsync(Entry);
+                attempt = prepared.AttemptId;
+                CoreName = prepared.Request.Core;
                 await ArcadeSessionCoordinator.BeforeLaunchAsync();
                 // Use the very same production generator and activation API as the probe.
                 string url = UrlSchemeGenerator.GetUrl(this);
-                if (url != Entry.Launch.ProtocolUri) throw new InvalidOperationException("Catalog launch format differs from the validated generator.");
+                if (url != prepared.Request.ProtocolUri) throw new InvalidOperationException("Core override launch format differs from the validated generator.");
                 Log("Game=" + Entry.Id + " activation requested URI=" + url);
                 bool activated = await Launcher.LaunchUriAsync(new Uri(url));
                 accepted = activated;
+                await GameCoreService.Current.CompleteAsync(attempt, activated);
                 Log("Game=" + Entry.Id + " LaunchUriAsync=" + activated + "; game loading requires Xbox verification");
                 if (!activated) throw new InvalidOperationException("RetroArch protocol activation was declined.");
+            }
+            catch (Exception ex)
+            {
+                await GameCoreService.Current.CompleteAsync(attempt, false, ex);
+                throw;
             }
             finally { launching = false; ArcadeSessionCoordinator.LaunchFinished(accepted); }
         }

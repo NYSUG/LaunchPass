@@ -8,7 +8,7 @@ using System.Text;
 
 namespace LaunchPass.Catalog
 {
-    public enum CabinetAction { PreviousGame, NextGame, PreviousCategory, NextCategory, Select, Back, PreviousLetter, NextLetter, Favorites, AddFavorite, Search, NextTrack }
+    public enum CabinetAction { PreviousGame, NextGame, PreviousCategory, NextCategory, Select, Back, PreviousLetter, NextLetter, Favorites, AddFavorite, Search, NextTrack, GameSettings }
 
     [DataContract]
     internal sealed class CabinetInputDocument

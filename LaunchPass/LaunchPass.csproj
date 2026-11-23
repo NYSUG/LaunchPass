@@ -146,6 +146,8 @@
     <Compile Include="DataSourceManager.cs" />
     <Compile Include="InternalStorageProbe.cs" />
     <Compile Include="InternalCatalog.cs" />
+    <Compile Include="GameCoreService.cs" />
+    <Compile Include="GameCoreSettingsDialog.xaml.cs"><DependentUpon>GameCoreSettingsDialog.xaml</DependentUpon></Compile>
     <Compile Include="InputDiagnostics.cs" />
     <Compile Include="CabinetInput.cs" />
     <Compile Include="PremiumArtworkCache.cs" />
@@ -271,7 +273,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Page Include="ArcadeAttractPresenter.xaml"><Generator>MSBuild:Compile</Generator></Page><Page Include="Themes\TimsArcadeTheme.xaml"><Generator>MSBuild:Compile</Generator></Page><Page Include="PremiumBrowserPage.xaml">
+    <Page Include="ArcadeAttractPresenter.xaml"><Generator>MSBuild:Compile</Generator></Page><Page Include="Themes\TimsArcadeTheme.xaml"><Generator>MSBuild:Compile</Generator></Page><Page Include="GameCoreSettingsDialog.xaml"><Generator>MSBuild:Compile</Generator><SubType>Designer</SubType></Page><Page Include="PremiumBrowserPage.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

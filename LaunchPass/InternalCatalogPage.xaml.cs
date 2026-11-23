@@ -100,6 +100,7 @@ namespace RetroPass
                 string json = await FileIO.ReadTextAsync(file);
                 StartupLog.Write("Catalog JSON: parse begin; characters=" + json.Length);
                 var entries = CatalogPresentationOrder.Sort(CatalogReader.Parse(json));
+                GameCoreService.Current.RegisterCatalog(entries);
                 StartupLog.Write("Catalog JSON: parse complete; games=" + entries.Count);
                 foreach (var group in entries.GroupBy(e => e.PlatformId, StringComparer.OrdinalIgnoreCase))
                 {

@@ -50,6 +50,8 @@ namespace RetroPass
         private IDisposable cabinetInput;
         private bool active, loading, syncing, launching, searching;
         private int generation;
+        private GameCoreSettingsDialog coreSettingsDialog;
+        private bool coreSettingsOpening, cancelCoreSettingsOpen;
 
         public PremiumBrowserPage()
         {
@@ -78,6 +80,7 @@ namespace RetroPass
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             active = false;
+            EndLaunchCover("page navigation");
             LeaveExperienceBounds();
             ArcadeSessionCoordinator.Current.Detach(this);
             cabinetInput?.Dispose(); cabinetInput = null;
@@ -102,6 +105,7 @@ namespace RetroPass
                 StartupLog.Write("Premium browser: catalog read begin");
                 var file = await ApplicationData.Current.LocalFolder.GetFileAsync("InternalCatalog.json");
                 var entries = CatalogPresentationOrder.Sort(CatalogReader.Parse(await FileIO.ReadTextAsync(file)));
+                GameCoreService.Current.RegisterCatalog(entries);
                 foreach (var group in entries.GroupBy(entry => entry.PlatformId, StringComparer.OrdinalIgnoreCase))
                 {
                     var platform = new Platform { Name = group.First().PlatformTitle, EmulatorType = Platform.EEmulatorType.retroarch };
@@ -142,7 +146,12 @@ namespace RetroPass
                 StartupLog.Write("Premium browser: load failed; using existing recovery page: " + ex);
                 if (active) Frame.Navigate(typeof(InternalCatalogPage));
             }
-            finally { loading = false; CompleteExperienceStartup(); }
+            finally
+            {
+                loading = false;
+                if (active && selection?.Current != null) QueueWheelRestore();
+                else CompleteExperienceStartup();
+            }
         }
         private void RenderCategory()
         {
@@ -156,14 +165,13 @@ namespace RetroPass
             }
             syncing = false;
             RenderSelection();
+            QueueWheelRestore();
         }
         private void RenderSelection()
         {
             if (!active || selection?.Current == null) return;
-            syncing = true;
-            Wheel.SelectedIndex = selection.SelectedIndex;
+            SynchronizeWheelSelection();
             for (int i = 0; i < rows.Count; i++) rows[i].Select(i == selection.SelectedIndex);
-            syncing = false;
             var entry = selection.Current;
             try
             {
@@ -176,7 +184,7 @@ namespace RetroPass
             HeroTitle.Text = GameTitle.Text = FallbackTitle.Text = entry.Title;
             PremiumMetadata info;
             MetadataText.Text = metadata.TryGetValue(entry.Id, out info) ? string.Join("  ·  ", new[] { info.Year, info.Manufacturer, info.Genre }.Where(s => !string.IsNullOrWhiteSpace(s))) : "";
-            StatusText.Text = "Ready · Y / configured Search opens search";
+            StatusText.Text = "Ready · Y / configured Search · View / configured GameSettings opens core settings";
             for (int i = 0; i < rows.Count; i++) if (Math.Abs(i - selection.SelectedIndex) > 3 || (pressure && i != selection.SelectedIndex)) rows[i].Logo = null;
             FocusSelection();
             RequestArtwork();
@@ -188,12 +196,24 @@ namespace RetroPass
         }
         private void Wheel_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (syncing || selection == null || Wheel.SelectedIndex < 0) return;
-            selection.Select(Wheel.SelectedIndex); RenderSelection();
+            // XAML focus/virtualization can select a different row during realization.
+            // Cabinet actions, search and ItemClick own the model, never layout events.
+            if (!syncing) SynchronizeWheelSelection();
+        }
+        private void SynchronizeWheelSelection()
+        {
+            if (selection == null || selection.SelectedIndex < 0 || selection.SelectedIndex >= rows.Count) return;
+            syncing = true;
+            try
+            {
+                var expected = rows[selection.SelectedIndex];
+                if (!ReferenceEquals(Wheel.SelectedItem, expected)) Wheel.SelectedItem = expected;
+            }
+            finally { syncing = false; }
         }
         private void Wheel_ItemClick(object sender, ItemClickEventArgs e)
         {
-            if (ArcadeSessionCoordinator.BlockActions) return;
+            if (launchCover.Active || ArcadeSessionCoordinator.BlockActions) return;
             var row = e.ClickedItem as PremiumWheelItem;
             if (selection == null || row == null) return;
             selection.SelectGame(row.Entry.Id); RenderSelection(); HandleAction(CabinetAction.Select);
@@ -202,18 +222,29 @@ namespace RetroPass
         {
             try
             {
-                if (!active || loading || launching || ArcadeSessionCoordinator.BlockActions) return;
+                if (action == CabinetAction.Back && coreSettingsOpening) { cancelCoreSettingsOpen = true; return; }
+                if (action == CabinetAction.Back && coreSettingsDialog != null) { coreSettingsDialog.CancelFromBack(); return; }
+                if (!active || loading || launching || searching || launchCover.Active || ArcadeSessionCoordinator.BlockActions) return;
                 if (action == CabinetAction.Back) { Frame.Navigate(typeof(InternalCatalogPage)); return; }
                 if (selection?.Current == null) return;
+                if (action == CabinetAction.GameSettings) { await OpenGameSettings(); return; }
                 if (action == CabinetAction.Select)
                 {
                     launching = true;
+                    bool completed = false;
                     try
                     {
+                        await ShowLaunchCover(selection.Current.Title);
                         ReleaseArtwork("launch");
                         await GameDetailsPage.StartContent(games[selection.Current.Id]);
+                        completed = true;
                     }
-                    finally { launching = false; }
+                    finally
+                    {
+                        launching = false;
+                        if (!completed) EndLaunchCover("launch error");
+                        if (!launchCover.Active && active && foreground && selection != null) RenderCategory();
+                    }
                     return;
                 }
                 if (action == CabinetAction.Search) { await Search(); return; }
@@ -245,9 +276,35 @@ namespace RetroPass
             if (result != null) selection.SelectGame(result.Entry.Id);
             if (active) RenderCategory();
         }
+        private async Task OpenGameSettings()
+        {
+            if (searching || coreSettingsOpening || coreSettingsDialog != null || selection?.Current == null) return;
+            searching = coreSettingsOpening = true; cancelCoreSettingsOpen = false;
+            bool test = false;
+            try
+            {
+                var entry = selection.Current;
+                var context = await GameCoreService.Current.LoadAsync(entry);
+                if (!active || cancelCoreSettingsOpen) return;
+                coreSettingsDialog = new GameCoreSettingsDialog();
+                coreSettingsDialog.Initialize(entry, context, HeroLogo.Source as BitmapImage);
+                coreSettingsOpening = false;
+                await coreSettingsDialog.ShowAsync();
+                test = coreSettingsDialog.TestLaunchRequested;
+            }
+            finally
+            {
+                coreSettingsDialog = null; coreSettingsOpening = false; searching = false; gamepadGate.Reset();
+                if (active && selection != null) RenderCategory();
+            }
+            if (test && active) HandleAction(CabinetAction.Select);
+        }
         private void BackRequested(object sender, BackRequestedEventArgs e)
         {
+            if (launchCover.Active) { e.Handled = true; return; }
             if (ArcadeSessionCoordinator.ConsumeBack()) { e.Handled = true; return; }
+            if (coreSettingsOpening) { cancelCoreSettingsOpen = true; e.Handled = true; return; }
+            if (coreSettingsDialog != null) { coreSettingsDialog.CancelFromBack(); e.Handled = true; return; }
             if (!active) return;
             if (searching)
             {
@@ -259,9 +316,10 @@ namespace RetroPass
         private void WindowActivated(object sender, WindowActivatedEventArgs e)
         {
             foreground = e.WindowActivationState != CoreWindowActivationState.Deactivated;
+            LaunchCoverForegroundChanged(foreground);
             if (foreground) RefreshMemoryPolicy();
             if (!foreground) { gamepadGate.Reset(); ReleaseArtwork("deactivated"); }
-            else if (active && selection != null && !searching) RenderSelection();
+            else if (active && selection != null && !searching) RenderCategory();
         }
         private static bool GamepadAction(VirtualKey key, out CabinetAction action)
         {
@@ -280,6 +338,7 @@ namespace RetroPass
         private void GamepadDown(object sender, KeyRoutedEventArgs e)
         {
             if (ArcadeSessionCoordinator.ConsumeKey(e.OriginalKey, true)) { e.Handled = true; return; }
+            if (launchCover.Active) { e.Handled = true; return; }
             if (!active || searching || !ReferenceEquals(Frame?.Content, this)) return;
             // Dialogs register their own cabinet target and retain native controller handling.
             if (searching || FindParentDialog(FocusManager.GetFocusedElement() as DependencyObject)) return;
@@ -298,6 +357,11 @@ namespace RetroPass
                     StatusText.Text = "Play later (premium session): " + playLater.PlaylistItems.Count;
                 }
             }
+            else if (e.OriginalKey == VirtualKey.GamepadView)
+            {
+                e.Handled = true;
+                if (gamepadGate.Down((int)e.OriginalKey, CabinetAction.GameSettings, e.KeyStatus.WasKeyDown, clock.ElapsedMilliseconds, gamepadTiming)) HandleAction(CabinetAction.GameSettings);
+            }
         }
         private void GamepadUp(object sender, KeyRoutedEventArgs e)
         {
@@ -305,7 +369,7 @@ namespace RetroPass
             CabinetAction action;
             if (searching || FindParentDialog(FocusManager.GetFocusedElement() as DependencyObject)) return;
             if (GamepadAction(e.OriginalKey, out action)) { gamepadGate.Up((int)e.OriginalKey); e.Handled = true; }
-            else if (e.OriginalKey == VirtualKey.GamepadX) e.Handled = true;
+            else if (e.OriginalKey == VirtualKey.GamepadX || e.OriginalKey == VirtualKey.GamepadView) { gamepadGate.Up((int)e.OriginalKey); e.Handled = true; }
         }
         private static bool FindParentDialog(DependencyObject node)
         {

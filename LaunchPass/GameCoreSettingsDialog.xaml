@@ -1,0 +1,40 @@
+<ContentDialog x:Class="RetroPass.GameCoreSettingsDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="GAME SETTINGS" Background="#101522" Foreground="#F4F5ED" FontFamily="Segoe UI">
+    <ContentDialog.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries><ResourceDictionary Source="Themes/TimsArcadeTheme.xaml" /></ResourceDictionary.MergedDictionaries>
+            <x:Double x:Key="ContentDialogMaxWidth">800</x:Double>
+            <Style x:Key="CoreMenuButton" TargetType="Button">
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Left" />
+                <Setter Property="MinHeight" Value="40" />
+                <Setter Property="Margin" Value="0,3" />
+                <Setter Property="Foreground" Value="{StaticResource ArcadeTextBrush}" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource ArcadeNavigationBrush}" />
+            </Style>
+        </ResourceDictionary>
+    </ContentDialog.Resources>
+    <ScrollViewer MaxHeight="390" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Width="620" MaxWidth="680">
+            <Image x:Name="GameLogo" Height="64" Stretch="Uniform" IsHitTestVisible="False" />
+            <TextBlock x:Name="GameTitle" FontSize="23" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <TextBlock x:Name="EffectiveCore" FontSize="14" Foreground="{StaticResource ArcadeNavigationBrush}" TextWrapping="Wrap" Margin="0,6" />
+            <TextBlock x:Name="RegistrySource" FontSize="12" TextWrapping="Wrap" />
+            <Button x:Name="CoreButton" Tag="0" Style="{StaticResource CoreMenuButton}" Click="CoreClicked" GotFocus="RowFocused">
+                <StackPanel><TextBlock x:Name="CoreName" TextWrapping="Wrap" FontSize="18" /><TextBlock x:Name="CoreFile" TextWrapping="Wrap" FontSize="12" /></StackPanel>
+            </Button>
+            <TextBlock Text="Up/Down: menu • Left/Right: core • Select: activate • Back: cancel" FontSize="12" TextWrapping="Wrap" />
+            <Button x:Name="SaveButton" Tag="1" Content="Save override" Style="{StaticResource CoreMenuButton}" Click="SaveClicked" GotFocus="RowFocused" />
+            <Button x:Name="TestButton" Tag="2" Content="Save and Test Launch" Style="{StaticResource CoreMenuButton}" Click="TestClicked" GotFocus="RowFocused" Background="{StaticResource ArcadeActionBrush}" Foreground="#101522" />
+            <Button x:Name="ResetButton" Tag="3" Content="Reset to catalog default" Style="{StaticResource CoreMenuButton}" Click="ResetClicked" GotFocus="RowFocused" />
+            <Button x:Name="HistoryButton" Tag="4" Style="{StaticResource CoreMenuButton}" Click="HistoryClicked" GotFocus="RowFocused" />
+            <TextBlock x:Name="TriedCores" FontSize="12" TextWrapping="Wrap" />
+            <TextBlock x:Name="HistoryText" FontSize="12" TextWrapping="Wrap" Margin="0,6" />
+            <Button x:Name="CancelButton" Tag="5" Content="Cancel / Back" Style="{StaticResource CoreMenuButton}" Click="CancelClicked" GotFocus="RowFocused" />
+            <TextBlock x:Name="Notice" Foreground="{StaticResource ArcadeActionBrush}" FontSize="13" TextWrapping="Wrap" />
+            <TextBlock Text="A return is not proof of a crash or successful gameplay. ROM-set version, parents, BIOS or CHDs may be involved. Cancel discards only unsaved choices." FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" />
+        </StackPanel>
+    </ScrollViewer>
+</ContentDialog>

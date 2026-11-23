@@ -26,6 +26,8 @@ class Program
     static async Task Main()
     {
         var defaults=ArcadeExperienceSettings.Parse("{\"version\":1}");
+        var reported = ArcadeExperienceSettings.Parse("{\"version\":1,\"music\":{\"enabled\":true,\"volume\":0.5},\"attract\":{\"enabled\":false,\"idleSeconds\":180,\"cycleSeconds\":12}}");
+        Check(reported.Music.Enabled && reported.Music.Volume == .5 && !reported.Attract.Enabled, "reported Xbox settings explicitly disable museum");
         CabinetAction next; int token;
         Check(!CabinetInputMap.Defaults().TryResolve(78, out token, out next), "NextTrack has no default physical binding");
         var nextMap = CabinetInputMap.Parse("{\"version\":1,\"bindings\":[{\"key\":\"N\",\"action\":\"NextTrack\"}]}");

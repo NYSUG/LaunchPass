@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "overrides": {
+    "arcade-1941": { "core": "mame2003_plus_libretro.dll" }
+  }
+}

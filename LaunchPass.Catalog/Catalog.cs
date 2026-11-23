@@ -56,10 +56,14 @@ namespace LaunchPass.Catalog
         public string PlatformTitle { get; private set; }
         public string Artwork { get; private set; }
         public LaunchRequest Launch { get; private set; }
+        public string CatalogCoreOverride { get; private set; }
+        public string PlatformDefaultCore { get; private set; }
+        public LaunchRequest WithCore(string core) => new LaunchRequest(Id, Launch.RomPath, GameCoreRules.File(core));
         internal CatalogEntry(CatalogGame game, CatalogPlatform platform, string root)
         {
             Id = game.Id; Title = game.Title; PlatformId = platform.Id;
             PlatformTitle = platform.Title; Artwork = game.Artwork;
+            CatalogCoreOverride = game.Core; PlatformDefaultCore = platform.DefaultCore;
             string rom = WindowsPaths.Resolve(root, game.Rom);
             if (rom.Length == 3) throw new FormatException("ROM must name a file, not a drive root.");
             Launch = new LaunchRequest(Id, rom, game.Core ?? platform.DefaultCore);

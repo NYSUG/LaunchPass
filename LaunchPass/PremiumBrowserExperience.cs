@@ -18,6 +18,7 @@ namespace RetroPass
         private LatestArtworkQueue<PremiumArtworkRequest, PremiumArtworkImage> museumQueue;
         private int museumEpoch;
         private bool releasingExperience, startupComplete;
+        private readonly PremiumLaunchCover launchCover = new PremiumLaunchCover();
         private ApplicationViewBoundsMode? previousBounds;
         private void EnterExperienceBounds()
         {
@@ -31,7 +32,7 @@ namespace RetroPass
             if (previousBounds.HasValue) ApplicationView.GetForCurrentView().SetDesiredBoundsMode(previousBounds.Value);
             previousBounds = null;
         }
-        internal bool ExperienceReady => selection != null && !loading && !launching && !pressure;
+        internal bool ExperienceReady => selection != null && !loading && !launching && !launchCover.Active && !pressure;
         internal bool ExperienceDialog => searching || FindParentDialog(FocusManager.GetFocusedElement() as DependencyObject);
         private void InitializeExperience()
         {
@@ -70,6 +71,49 @@ namespace RetroPass
             StartupEntrance.Source = null;
         }
         private void ExperienceFailed() { CompleteExperienceStartup(); }
+        private async Task ShowLaunchCover(string title)
+        {
+            launchCover.Begin(ArcadeSessionCoordinator.Current.Now);
+            LaunchTitle.Text = title;
+            LaunchEntrance.Source = new BitmapImage(new Uri("ms-appx:///Assets/Branding/TimsArcadeSplash.png")) { DecodePixelWidth = 1920 };
+            LaunchOverlay.Visibility = Visibility.Visible;
+            var painted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            EventHandler<object> render = (sender, args) => painted.TrySetResult(true);
+            CompositionTarget.Rendering += render;
+            try { await Task.WhenAny(painted.Task, Task.Delay(150)); }
+            finally { CompositionTarget.Rendering -= render; }
+        }
+        internal void LaunchActivationCompleted(bool accepted)
+        {
+            bool wasActive = launchCover.Active;
+            launchCover.ActivationCompleted(accepted);
+            if (!accepted && wasActive)
+            {
+                EndLaunchCover("activation declined or failed");
+                if (active && foreground && selection != null) RenderCategory();
+            }
+        }
+        private void LaunchCoverForegroundChanged(bool visible)
+        {
+            if (!visible) launchCover.Leave();
+            else if (launchCover.Return()) EndLaunchCover("returned to launcher");
+        }
+        internal void TickLaunchCover(double now, bool visible)
+        {
+            if (launchCover.Expire(now, visible))
+            {
+                EndLaunchCover("activation accepted but no foreground departure observed within 10 seconds");
+                ArcadeSessionCoordinator.LaunchFinished(false);
+                if (active && selection != null) RenderCategory();
+            }
+        }
+        private void EndLaunchCover(string reason)
+        {
+            launchCover.Cancel();
+            LaunchOverlay.Visibility = Visibility.Collapsed;
+            LaunchEntrance.Source = null;
+            StartupLog.Write("Premium launch cover: " + reason);
+        }
         internal void ExperienceEvent(string name)
         {
             try

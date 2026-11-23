@@ -22,7 +22,12 @@ namespace RetroPass
         internal static void NextTrack(){if(current!=null)current.Next();}
         internal static bool BlockActions=>current!=null&&(current.Engine.Input.AttractActive||current.Engine.Input.Quiet(current.Now));
         internal static Task BeforeLaunchAsync()=>current==null?Task.CompletedTask:current.PrepareLaunch();
-        internal static void LaunchFinished(bool activated){if(current!=null && !activated){current.Policy.Launching=false;current.Resume();}}
+        internal static void LaunchFinished(bool activated)
+        {
+            if(current==null)return;
+            current.presenter?.LaunchActivationCompleted(activated);
+            if(!activated){current.Policy.Launching=false;current.Resume();}
+        }
         internal readonly ArcadeSessionPolicy Policy=new ArcadeSessionPolicy();
         internal readonly ArcadeAttractEngine Engine=new ArcadeAttractEngine();
         internal ArcadeExperienceSettings Settings{get;private set;}=new ArcadeExperienceSettings();
@@ -59,7 +64,11 @@ namespace RetroPass
             Application.Current.EnteredBackground+=(sender,args)=>{Policy.Foreground=false;Engine.Reset(Now);radio.Suspend();};
             Application.Current.LeavingBackground+=(sender,args)=>{Policy.Foreground=true;Policy.Launching=false;Engine.Reset(Now);Resume();};
             Application.Current.Suspending+=(sender,args)=>{Policy.Foreground=false;Engine.Reset(Now);radio.Suspend();};
-            Engine.Event+=name=>{presenter?.ExperienceEvent(name);ExperienceChanged?.Invoke(name,Engine.CurrentGame);};
+            Engine.Event+=name=>
+            {
+                if(name=="attract-enter"||name=="attract-exit")StartupLog.Write("Arcade museum: "+name);
+                presenter?.ExperienceEvent(name);ExperienceChanged?.Invoke(name,Engine.CurrentGame);
+            };
             timer.Tick+=(sender,args)=>Tick();timer.Start();
         }
         internal Task InitializeAsync()=>initialization??(initialization=Initialize());
@@ -75,6 +84,8 @@ namespace RetroPass
                 }
             }
             catch(Exception ex){Settings=new ArcadeExperienceSettings();StartupLog.Write("ArcadeExperience settings rejected; safe defaults: "+ex.Message);}
+            StartupLog.Write("ArcadeExperience effective settings: music="+Settings.Music.Enabled+
+                "; attract="+Settings.Attract.Enabled+"; idleSeconds="+Settings.Attract.IdleSeconds+"; cycleSeconds="+Settings.Attract.CycleSeconds+"; restart required after editing JSON");
             initialized=true;radio.Configure(Settings.Music);Resume();
         }
         internal void Attach(PremiumBrowserPage page){presenter=page;Engine.Reset(Now);Resume();}
@@ -116,6 +127,7 @@ namespace RetroPass
                 Policy.PremiumVisible=presenter!=null&&ReferenceEquals(frame?.Content,presenter);
                 Policy.Ready=Policy.PremiumVisible&&presenter.ExperienceReady;
                 Policy.Dialog=Policy.PremiumVisible&&presenter.ExperienceDialog;
+                presenter?.TickLaunchCover(Now,Policy.Foreground);
                 if(Settings.Attract.Enabled&&Policy.CanAttract)
                 {
                     foreach(var pad in Gamepad.Gamepads)

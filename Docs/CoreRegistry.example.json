@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "source": "Example only — confirm this filename against the installed RetroArch package",
+  "cores": [
+    {
+      "file": "mame2003_plus_libretro.dll",
+      "name": "Arcade (MAME 2003-Plus)",
+      "available": true
+    }
+  ]
+}

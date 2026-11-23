@@ -64,6 +64,25 @@ namespace LaunchPass.Catalog
         }
     }
 
+    // Keep the cover after URI acceptance; dismiss only on return, failure or a
+    // foreground timeout when no departure ever occurred.
+    public sealed class PremiumLaunchCover
+    {
+        public bool Active { get; private set; }
+        public bool Departed { get; private set; }
+        private double started;
+        public void Begin(double now) { Active = true; Departed = false; started = now; }
+        public void Leave() { if (Active) Departed = true; }
+        public bool Return() { if (!Active || !Departed) return false; Cancel(); return true; }
+        public void ActivationCompleted(bool accepted) { if (!accepted) Cancel(); }
+        public bool Expire(double now, bool foreground)
+        {
+            if (!Active || Departed || !foreground || now - started < 10000) return false;
+            Cancel(); return true;
+        }
+        public void Cancel() { Active = Departed = false; }
+    }
+
     public static class PremiumArtwork
     {
         // Catalog IDs already allow only letters/digits/_/-. Encode Windows device names.

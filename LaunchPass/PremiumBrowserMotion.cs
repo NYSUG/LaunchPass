@@ -27,6 +27,7 @@ namespace RetroPass
         private Visual wheelVisual;
         private bool wheelTranslationUnavailable;
         private bool wheelTranslationStarted;
+        private bool wheelRestoreQueued;
         private double wheelOffset;
         private bool foreground = true, subscribed, pressure, focusPending, centerPending, scrollingMotion, snapWheelOnce;
         private string lastRelease = "startup";
@@ -48,8 +49,8 @@ namespace RetroPass
             artworkQueue = new LatestArtworkQueue<PremiumArtworkRequest, PremiumArtworkImage>(artwork.LoadAsync, 2);
             performance = new PremiumPerformanceDiagnostics(PerformanceText, PerformanceSnapshot);
             detailTimer.Tick += (sender, args) => { detailTimer.Stop(); if (CurrentArtwork(detailGeneration)) QueueArtwork(detailGeneration, true); };
-            Wheel.Loaded += (sender, args) => { InitializeWheel(); CenterWheel(false); };
-            Wheel.SizeChanged += (sender, args) => { InitializeWheel(); CenterWheel(false); };
+            Wheel.Loaded += (sender, args) => QueueWheelRestore();
+            Wheel.SizeChanged += (sender, args) => QueueWheelRestore();
             Wheel.BringIntoViewRequested += (sender, args) => args.Handled = true;
             Wheel.LayoutUpdated += (sender, args) =>
             {
@@ -92,11 +93,12 @@ namespace RetroPass
             }
             performance.Stop(); ReleaseArtwork("navigation");
         }
-        private void PresentationEnteredBackground(object sender, EnteredBackgroundEventArgs e) { foreground = false; ReleaseArtwork("background"); }
+        private void PresentationEnteredBackground(object sender, EnteredBackgroundEventArgs e) { foreground = false; LaunchCoverForegroundChanged(false); ReleaseArtwork("background"); }
         private void PresentationLeavingBackground(object sender, LeavingBackgroundEventArgs e)
         {
             foreground = true;
-            if (active && selection != null && !searching) RenderSelection();
+            LaunchCoverForegroundChanged(true);
+            if (active && selection != null && !searching) RenderCategory();
         }
         private void PresentationSuspending(object sender, SuspendingEventArgs e) { ReleaseArtwork("suspending"); }
         private void MemoryIncreased(object sender, object e)
@@ -353,6 +355,25 @@ namespace RetroPass
             double padding = Math.Max(0, (Wheel.ActualHeight - WheelPitch) / 2);
             WheelTopSpacer.Height = WheelBottomSpacer.Height = padding;
         }
+        private async void QueueWheelRestore()
+        {
+            if (wheelRestoreQueued) return;
+            wheelRestoreQueued = true;
+            try
+            {
+                await Dispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
+                {
+                    wheelRestoreQueued = false;
+                    if (!active || searching || selection?.Current == null || !Wheel.IsLoaded || launchCover.Active) return;
+                    SynchronizeWheelSelection();
+                    // One deferred measure per category/activation, not per joystick step.
+                    Wheel.UpdateLayout();
+                    InitializeWheel(); CenterWheel(false); UpdateRowVisuals(false);
+                    if (!loading) CompleteExperienceStartup();
+                });
+            }
+            catch (Exception ex) { wheelRestoreQueued = false; CompleteExperienceStartup(); StartupLog.Write("Premium wheel restore: " + ex.Message); }
+        }
         private void CenterWheel(bool animate = true)
         {
             if (!active || selection?.Current == null) return;
@@ -368,9 +389,10 @@ namespace RetroPass
         }
         private void FocusRealizedSelection()
         {
-            if (!active) { focusPending = false; return; }
-            var container = Wheel.ContainerFromIndex(Wheel.SelectedIndex) as ListViewItem;
-            if (container == null) { Wheel.Focus(FocusState.Programmatic); return; }
+            if (!active || searching || selection?.Current == null) { focusPending = false; return; }
+            var container = Wheel.ContainerFromIndex(selection.SelectedIndex) as ListViewItem;
+            if (container == null || selection.SelectedIndex >= rows.Count ||
+                !ReferenceEquals(container.Content, rows[selection.SelectedIndex])) return;
             focusPending = false; container.Focus(FocusState.Programmatic);
         }
         private void WheelViewChanged(object sender, ScrollViewerViewChangedEventArgs args)
