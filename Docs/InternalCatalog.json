@@ -1,0 +1,1146 @@
+{
+  "version": 1,
+  "contentRoot": "D:\\DevelopmentFiles\\roms\\arcade",
+  "platforms": [
+    {
+      "id": "arcade",
+      "title": "Arcade",
+      "defaultCore": "mame2003_plus_libretro.dll"
+    },
+    {
+      "id": "genesis",
+      "title": "Genesis",
+      "defaultCore": "genesis_plus_gx_libretro.dll"
+    },
+    {
+      "id": "snes",
+      "title": "SNES",
+      "defaultCore": "snes9x_libretro.dll"
+    }
+  ],
+  "games": [
+    {
+      "id": "genesis-688",
+      "platform": "genesis",
+      "title": "688 Attack Sub",
+      "rom": "D:\\DevelopmentFiles\\roms\\genesis\\688.zip",
+      "artwork": "Artwork/1941.png"
+    },
+    {
+      "id": "snes-actraiser",
+      "platform": "snes",
+      "title": "Act Raiser",
+      "rom": "D:\\DevelopmentFiles\\roms\\snes\\ActRaiser.zip",
+      "artwork": "Artwork/1941.png"
+    },
+    {
+      "id": "arcade-1941",
+      "platform": "arcade",
+      "title": "1941: Counter Attack",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\1941.zip",
+      "artwork": "Artwork/1941.png"
+    },
+    {
+      "id": "arcade-btoads",
+      "platform": "arcade",
+      "title": "Battle Toads",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\btoads.zip",
+      "artwork": "Artwork/btoads.png"
+    },
+    {
+      "id": "arcade-mk",
+      "platform": "arcade",
+      "title": "Mortal Kombat",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\mk.zip",
+      "artwork": "Artwork/mk.png"
+    },
+    {
+      "id": "arcade-mk2",
+      "platform": "arcade",
+      "title": "Mortal Kombat 2",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\mk2.zip",
+      "artwork": "Artwork/mk2.png"
+    },
+    {
+      "id": "arcade-mk3",
+      "platform": "arcade",
+      "title": "Mortal Kombat 3",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\mk3.zip",
+      "artwork": "Artwork/mk3.png"
+    },
+    {
+      "id": "arcade-66adf631004760a6",
+      "platform": "arcade",
+      "title": "2020 Super Baseball",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\2020bb.zip"
+    },
+    {
+      "id": "arcade-7fb438a0f2a53f1e",
+      "platform": "arcade",
+      "title": "64th. Street: A Detective Story",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\64street.zip"
+    },
+    {
+      "id": "arcade-aca619ff35a4dcbd",
+      "platform": "arcade",
+      "title": "After Burner II",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\aburner2.zip"
+    },
+    {
+      "id": "arcade-ec7a99e4e4646a80",
+      "platform": "arcade",
+      "title": "Aero Fighters",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\aerofgt.zip"
+    },
+    {
+      "id": "arcade-8bcc0fec4f3d7e46",
+      "platform": "arcade",
+      "title": "Ajax",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\ajax.zip"
+    },
+    {
+      "id": "arcade-c133e23982561106",
+      "platform": "arcade",
+      "title": "Altered Beast",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\altbeast.zip"
+    },
+    {
+      "id": "arcade-aa2f5223fc9a925d",
+      "platform": "arcade",
+      "title": "Art of Fighting 2 / Ryuuko no Ken 2",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\aof2.zip"
+    },
+    {
+      "id": "arcade-b950aa6f4993b837",
+      "platform": "arcade",
+      "title": "Area 51 (R3000)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\area51.zip"
+    },
+    {
+      "id": "arcade-96518335bdaaeec4",
+      "platform": "arcade",
+      "title": "Area 51 / Maximum Force Duo v2.0",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\area51mx.zip"
+    },
+    {
+      "id": "arcade-4c5e6cd32b35486b",
+      "platform": "arcade",
+      "title": "Arkanoid",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\arkanoid.zip"
+    },
+    {
+      "id": "arcade-d1f45bbd6978ebae",
+      "platform": "arcade",
+      "title": "Armored Warriors",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\armwar.zip"
+    },
+    {
+      "id": "arcade-04bd1056d500daff",
+      "platform": "arcade",
+      "title": "Alien vs. Predator",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\avsp.zip"
+    },
+    {
+      "id": "arcade-5263b08f077ccc31",
+      "platform": "arcade",
+      "title": "Battle Circuit",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\batcir.zip"
+    },
+    {
+      "id": "arcade-120a516d6afc36d5",
+      "platform": "arcade",
+      "title": "Batman",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\batman.zip"
+    },
+    {
+      "id": "arcade-02dee97f494c7ba9",
+      "platform": "arcade",
+      "title": "Batman Forever",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\batmanfr.zip"
+    },
+    {
+      "id": "arcade-63ba6c9e60a64cba",
+      "platform": "arcade",
+      "title": "MPU4 Video Firmware",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\bctvidbs.zip"
+    },
+    {
+      "id": "arcade-907f095da7e58fad",
+      "platform": "arcade",
+      "title": "Blazing Star",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\blazstar.zip"
+    },
+    {
+      "id": "arcade-3afb37c7208630c5",
+      "platform": "arcade",
+      "title": "NFL Blitz '99",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\blitz99.zip"
+    },
+    {
+      "id": "arcade-a9b8b16677d463b9",
+      "platform": "arcade",
+      "title": "Break Thru",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\brkthru.zip"
+    },
+    {
+      "id": "arcade-4e3901dfc1cab5b7",
+      "platform": "arcade",
+      "title": "Baseball Stars Professional",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\bstars.zip"
+    },
+    {
+      "id": "arcade-7176bdc96ca0c42b",
+      "platform": "arcade",
+      "title": "Baseball Stars 2",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\bstars2.zip"
+    },
+    {
+      "id": "arcade-cbb73ccb8fc031f6",
+      "platform": "arcade",
+      "title": "Captain Commando",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\captcomm.zip"
+    },
+    {
+      "id": "arcade-ceb1bce4f14c473b",
+      "platform": "arcade",
+      "title": "Amiga CD32 (PAL)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\cd32.zip"
+    },
+    {
+      "id": "arcade-85c3da43c4191d52",
+      "platform": "arcade",
+      "title": "Adventure Quiz Capcom World 2",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\cworld2j.zip"
+    },
+    {
+      "id": "arcade-3ef1af3c00accbb5",
+      "platform": "arcade",
+      "title": "Cyberbots: Fullmetal Madness",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\cybots.zip"
+    },
+    {
+      "id": "arcade-26a5e6f9ae05a48f",
+      "platform": "arcade",
+      "title": "Double Dragon",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\ddragonu.zip"
+    },
+    {
+      "id": "arcade-60cdaa10829f9884",
+      "platform": "arcade",
+      "title": "Dungeons & Dragons: Shadow over Mystara",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\ddsom.zip"
+    },
+    {
+      "id": "arcade-1c89f6f3114d3455",
+      "platform": "arcade",
+      "title": "Dungeons & Dragons: Tower of Doom",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\ddtod.zip"
+    },
+    {
+      "id": "arcade-ad45603dbff1ecc1",
+      "platform": "arcade",
+      "title": "Die Hard Arcade",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\diehard.zip"
+    },
+    {
+      "id": "arcade-bbb8fb7f5aa0a010",
+      "platform": "arcade",
+      "title": "Dimahoo",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\dimahoo.zip"
+    },
+    {
+      "id": "arcade-ebabdea96e57fcb1",
+      "platform": "arcade",
+      "title": "Cadillacs and Dinosaurs",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\dino.zip"
+    },
+    {
+      "id": "arcade-e16af10ca78f363f",
+      "platform": "arcade",
+      "title": "Double Dragon (Neo-Geo)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\doubledr.zip"
+    },
+    {
+      "id": "arcade-05b2fcc02e150428",
+      "platform": "arcade",
+      "title": "Eco Fighters",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\ecofghtr.zip"
+    },
+    {
+      "id": "arcade-fad4637286f39f0f",
+      "platform": "arcade",
+      "title": "Escape from the Planet of the Robot Monsters",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\eprom.zip"
+    },
+    {
+      "id": "arcade-9d68633357a1b45e",
+      "platform": "arcade",
+      "title": "Escape from the Planet of the Robot Monsters",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\eprom2.zip"
+    },
+    {
+      "id": "arcade-d703da02d542c535",
+      "platform": "arcade",
+      "title": "Fatal Fury - King of Fighters / Garou Densetsu - Shukumei no Tatakai",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\fatfury1.zip"
+    },
+    {
+      "id": "arcade-014c92787f46add9",
+      "platform": "arcade",
+      "title": "Final Fight",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\ffight.zip"
+    },
+    {
+      "id": "arcade-f8782ea853b166ae",
+      "platform": "arcade",
+      "title": "Forgotten Worlds",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\forgottn.zip"
+    },
+    {
+      "id": "arcade-acddb9a25d7b4480",
+      "platform": "arcade",
+      "title": "Ninja Gaiden",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\gaiden.zip"
+    },
+    {
+      "id": "arcade-9fe51f17a38bc6ef",
+      "platform": "arcade",
+      "title": "Galaxy Force 2",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\gforce2.zip"
+    },
+    {
+      "id": "arcade-aa85904811491696",
+      "platform": "arcade",
+      "title": "Ghouls'n Ghosts",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\ghouls.zip"
+    },
+    {
+      "id": "arcade-4f78b6ae1020eff2",
+      "platform": "arcade",
+      "title": "Giga Wing",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\gigawing.zip"
+    },
+    {
+      "id": "arcade-b2f88cc541f6c998",
+      "platform": "arcade",
+      "title": "Voltage Fighter - Gowcaizer / Choujin Gakuen Gowcaizer",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\gowcaizr.zip"
+    },
+    {
+      "id": "arcade-8e58de646c485e7b",
+      "platform": "arcade",
+      "title": "Hyper Street Fighter II: The Anniversary Edition",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\hsf2.zip"
+    },
+    {
+      "id": "arcade-e66fb05f61ca8daa",
+      "platform": "arcade",
+      "title": "JoJo's Bizarre Adventure",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\jojobane.zip"
+    },
+    {
+      "id": "arcade-2938e890dad0666c",
+      "platform": "arcade",
+      "title": "Jurassic Park",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\jpark.zip"
+    },
+    {
+      "id": "arcade-2148afc51fa45110",
+      "platform": "arcade",
+      "title": "Killer Instinct",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\kinst.zip"
+    },
+    {
+      "id": "arcade-5f1c91c173d133d7",
+      "platform": "arcade",
+      "title": "The King of Dragons",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\kod.zip"
+    },
+    {
+      "id": "arcade-a76cdd4b04ca46cc",
+      "platform": "arcade",
+      "title": "Mercs",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\mercs.zip"
+    },
+    {
+      "id": "arcade-152748606085c28a",
+      "platform": "arcade",
+      "title": "Mars Matrix: Hyper Solid Shooting",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\mmatrix.zip"
+    },
+    {
+      "id": "arcade-09d84e835248bc83",
+      "platform": "arcade",
+      "title": "Marvel Super Heroes Vs. Street Fighter",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\mshvsf.zip"
+    },
+    {
+      "id": "arcade-e4765b0652d8a7aa",
+      "platform": "arcade",
+      "title": "Metal Slug 2 - Super Vehicle-001/II",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\mslug2.zip"
+    },
+    {
+      "id": "arcade-d6d68ce4cca72ce5",
+      "platform": "arcade",
+      "title": "Metal Slug 3",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\mslug3.zip"
+    },
+    {
+      "id": "arcade-5e3da2d1adb04fc5",
+      "platform": "arcade",
+      "title": "Marvel Vs. Capcom: Clash of Super Heroes",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\mvsc.zip"
+    },
+    {
+      "id": "arcade-f2f949483042726a",
+      "platform": "arcade",
+      "title": "NBA Hangtime",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\nbahangt.zip"
+    },
+    {
+      "id": "arcade-67681b0573738333",
+      "platform": "arcade",
+      "title": "OutRunners",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\orunners.zip"
+    },
+    {
+      "id": "arcade-f4059b2aa0191510",
+      "platform": "arcade",
+      "title": "Out Run (sitdown/upright, Rev B)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\outrun.zip"
+    },
+    {
+      "id": "arcade-a40daa089408b418",
+      "platform": "arcade",
+      "title": "Samurai Shodown 64: Warriors Rage / Samurai Spirits 2: Asura Zanmaden",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\sams64_2.zip"
+    },
+    {
+      "id": "arcade-44da3c77325cf9de",
+      "platform": "arcade",
+      "title": "Samurai Shodown / Samurai Spirits",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\samsho.zip"
+    },
+    {
+      "id": "arcade-d3460ed04d52c669",
+      "platform": "arcade",
+      "title": "Street Fighter",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\sf.zip"
+    },
+    {
+      "id": "arcade-1be091f057b1a135",
+      "platform": "arcade",
+      "title": "Street Fighter II': Champion Edition",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\sf2ce.zip"
+    },
+    {
+      "id": "arcade-f1a2a1148eef6684",
+      "platform": "arcade",
+      "title": "Street Fighter II' Turbo - Hyper Fighting",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\sf2tj.zip"
+    },
+    {
+      "id": "arcade-1e305e273726bda1",
+      "platform": "arcade",
+      "title": "Street Fighter Alpha: Warriors' Dreams",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\sfa.zip"
+    },
+    {
+      "id": "arcade-b6cd803dee41dd26",
+      "platform": "arcade",
+      "title": "Street Fighter Alpha 2",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\sfa2.zip"
+    },
+    {
+      "id": "arcade-d6371ed80bb885ab",
+      "platform": "arcade",
+      "title": "Street Fighter EX",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\sfex.zip"
+    },
+    {
+      "id": "arcade-a84bdb2282ad0364",
+      "platform": "arcade",
+      "title": "Street Fighter EX2 Plus",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\sfex2p.zip"
+    },
+    {
+      "id": "arcade-e7b704022a84a68d",
+      "platform": "arcade",
+      "title": "San Francisco Rush",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\sfrush.zip"
+    },
+    {
+      "id": "arcade-c26e8060dbef83fb",
+      "platform": "arcade",
+      "title": "Street Fighter: The Movie",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\sftm.zip"
+    },
+    {
+      "id": "arcade-d7c806a198614bc0",
+      "platform": "arcade",
+      "title": "The Simpsons (4 Players World, set 1)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\simpsons.zip"
+    },
+    {
+      "id": "arcade-9115ca240ae54f68",
+      "platform": "arcade",
+      "title": "Saturday Night Slam Masters",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\slammast.zip"
+    },
+    {
+      "id": "arcade-f4b7a79cc47f01de",
+      "platform": "arcade",
+      "title": "Smash T.V.",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\smashtv.zip"
+    },
+    {
+      "id": "arcade-0f8e3a4b1fd64791",
+      "platform": "arcade",
+      "title": "Soccer Brawl",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\socbrawl.zip"
+    },
+    {
+      "id": "arcade-38f1369e1f9ec520",
+      "platform": "arcade",
+      "title": "Soul Calibur",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\soulclbr.zip"
+    },
+    {
+      "id": "arcade-d356ddbe0639713c",
+      "platform": "arcade",
+      "title": "Spy Hunter",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\spyhunt.zip"
+    },
+    {
+      "id": "arcade-4c842d3496d16863",
+      "platform": "arcade",
+      "title": "Sega Rally 2: Sega Rally Championship",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\srally2.zip"
+    },
+    {
+      "id": "arcade-70017efda7fd74d9",
+      "platform": "arcade",
+      "title": "Silent Scope",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\sscope.zip"
+    },
+    {
+      "id": "arcade-a0d9d0e0c8e49bd1",
+      "platform": "arcade",
+      "title": "Super Street Fighter II: The New Challengers",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\ssf2.zip"
+    },
+    {
+      "id": "arcade-e98cb3a6e53431c4",
+      "platform": "arcade",
+      "title": "Street Hoop / Street Slam / Dunk Dream",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\strhoop.zip"
+    },
+    {
+      "id": "arcade-33d52422444e5ea8",
+      "platform": "arcade",
+      "title": "Strider",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\strider.zip"
+    },
+    {
+      "id": "arcade-2663f4efdb9dee2b",
+      "platform": "arcade",
+      "title": "Strider 2",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\stridr2a.zip"
+    },
+    {
+      "id": "arcade-f75c426340ecf381",
+      "platform": "arcade",
+      "title": "Superman",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\superman.zip"
+    },
+    {
+      "id": "arcade-7aef077ed4746203",
+      "platform": "arcade",
+      "title": "Star Wars Trilogy Arcade",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\swtrilgy.zip"
+    },
+    {
+      "id": "arcade-7aa5b8f4027573fd",
+      "platform": "arcade",
+      "title": "Terminator 2 - Judgment Day",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\term2.zip"
+    },
+    {
+      "id": "arcade-e434238ac7f135a0",
+      "platform": "arcade",
+      "title": "Time Crisis",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\timecris.zip"
+    },
+    {
+      "id": "arcade-d8624eb0503bc419",
+      "platform": "arcade",
+      "title": "Teenage Mutant Ninja Turtles (World 4 Players, version X)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\tmnt.zip"
+    },
+    {
+      "id": "arcade-bebd004fb32f56cd",
+      "platform": "arcade",
+      "title": "Battle Arena Toshinden 2",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\ts2.zip"
+    },
+    {
+      "id": "arcade-cb7f310e080ab4a7",
+      "platform": "arcade",
+      "title": "Tecmo World Cup '98",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\twcup98.zip"
+    },
+    {
+      "id": "arcade-f75e0281008f62e8",
+      "platform": "arcade",
+      "title": "U.N. Squadron",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\unsquad.zip"
+    },
+    {
+      "id": "arcade-666d478d9b03de1a",
+      "platform": "arcade",
+      "title": "Varth: Operation Thunderstorm",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\varth.zip"
+    },
+    {
+      "id": "arcade-313ed5d95eabec08",
+      "platform": "arcade",
+      "title": "Virtua Fighter",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\vf.zip"
+    },
+    {
+      "id": "arcade-6f3aacac386c88f9",
+      "platform": "arcade",
+      "title": "Willow",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\willow.zip"
+    },
+    {
+      "id": "arcade-6e27182458e7118b",
+      "platform": "arcade",
+      "title": "Warriors of Fate",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\wof.zip"
+    },
+    {
+      "id": "arcade-8d9a629ee97ef9ab",
+      "platform": "arcade",
+      "title": "X-Men: Children of the Atom",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\xmcota.zip"
+    },
+    {
+      "id": "arcade-f24987a840aa2fd2",
+      "platform": "arcade",
+      "title": "1941: Counter Attack",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\1941u.zip"
+    },
+    {
+      "id": "arcade-6f6253067c8e9db7",
+      "platform": "arcade",
+      "title": "3 Count Bout / Fire Suplex",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\3countb.zip"
+    },
+    {
+      "id": "arcade-afb63158bab387da",
+      "platform": "arcade",
+      "title": "9-Ball Shootout",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\9ballsht.zip"
+    },
+    {
+      "id": "arcade-2638f1e58ff27116",
+      "platform": "arcade",
+      "title": "A.B. Cop (World) (FD1094 317-0169b)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\abcop.zip"
+    },
+    {
+      "id": "arcade-a0d81262213e5c2b",
+      "platform": "arcade",
+      "title": "Alien3: The Gun",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\alien3.zip"
+    },
+    {
+      "id": "arcade-ea500f094f17f4d9",
+      "platform": "arcade",
+      "title": "Aliens",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\aliensu.zip"
+    },
+    {
+      "id": "arcade-0abe221e5d176b0a",
+      "platform": "arcade",
+      "title": "Art of Fighting / Ryuuko no Ken",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\aof.zip"
+    },
+    {
+      "id": "arcade-f7ca39bdfaba99ee",
+      "platform": "arcade",
+      "title": "Art of Fighting 3 - The Path of the Warrior / Art of Fighting - Ryuuko no Ken Gaiden",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\aof3.zip"
+    },
+    {
+      "id": "arcade-1bb1e7966de5aaa7",
+      "platform": "arcade",
+      "title": "Arch Rivals",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\archrivl.zip"
+    },
+    {
+      "id": "arcade-cae3133169043ce0",
+      "platform": "arcade",
+      "title": "Air Rescue",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\arescue.zip"
+    },
+    {
+      "id": "arcade-de74277410251686",
+      "platform": "arcade",
+      "title": "Asterix",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\asterix.zip"
+    },
+    {
+      "id": "arcade-50687a0ffcc886fd",
+      "platform": "arcade",
+      "title": "Burning Rival",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\brival.zip"
+    },
+    {
+      "id": "arcade-d9fb560d61285143",
+      "platform": "arcade",
+      "title": "Cruis'n USA",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\crusnusa.zip"
+    },
+    {
+      "id": "arcade-bf065ff19aaeefaf",
+      "platform": "arcade",
+      "title": "Crazy Taxi",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\crzytaxi.zip"
+    },
+    {
+      "id": "arcade-275fddb9adf7958c",
+      "platform": "arcade",
+      "title": "Defender (Red label)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\defender.zip"
+    },
+    {
+      "id": "arcade-49cd4a995b3d4fec",
+      "platform": "arcade",
+      "title": "Defender (Blue label)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\defenderb.zip"
+    },
+    {
+      "id": "arcade-2d5b2cad49e0c822",
+      "platform": "arcade",
+      "title": "Dig Dug",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\digdug.zip"
+    },
+    {
+      "id": "arcade-495c089250d3ea8a",
+      "platform": "arcade",
+      "title": "Donkey Kong",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\dkong.zip"
+    },
+    {
+      "id": "arcade-6323a4e484ba28fd",
+      "platform": "arcade",
+      "title": "Dragon Spirit (new version (DS3))",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\dspirit.zip"
+    },
+    {
+      "id": "arcade-60cbda4e1847013d",
+      "platform": "arcade",
+      "title": "Fatal Fury Special / Garou Densetsu Special (NGM-058 ~ NGH-058, set 1)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\fatfursp.zip"
+    },
+    {
+      "id": "arcade-4f8f58330d6dbbe5",
+      "platform": "arcade",
+      "title": "Final Fight 2 (SNES bootleg)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\ffight2b.zip"
+    },
+    {
+      "id": "arcade-bfd056112ec3024e",
+      "platform": "arcade",
+      "title": "Final Fight Revenge / Final Revenge",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\ffreveng.zip"
+    },
+    {
+      "id": "arcade-08a9db911395d93f",
+      "platform": "arcade",
+      "title": "Fist Of The North Star / Hokuto no Ken",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\fotns.zip"
+    },
+    {
+      "id": "arcade-d047f127347ac0f0",
+      "platform": "arcade",
+      "title": "Golden Axe: The Revenge of Death Adder",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\ga2.zip"
+    },
+    {
+      "id": "arcade-4fbe0ad2c04405d8",
+      "platform": "arcade",
+      "title": "Galaga (Namco rev. B)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\galaga.zip"
+    },
+    {
+      "id": "arcade-94f8c0cf8255e463",
+      "platform": "arcade",
+      "title": "Galaga '88",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\galaga88.zip"
+    },
+    {
+      "id": "arcade-2630ebd5ad6831de",
+      "platform": "arcade",
+      "title": "The Real Ghostbusters (US 2 Players, revision 2)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\ghostb.zip"
+    },
+    {
+      "id": "arcade-6674b33f6f3c0c6e",
+      "platform": "arcade",
+      "title": "Golden Axe (set 6, US) (8751 317-123A)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\goldnaxe.zip"
+    },
+    {
+      "id": "arcade-8d9c075b897d3900",
+      "platform": "arcade",
+      "title": "Hard Drivin' (cockpit, rev 7)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\harddriv.zip"
+    },
+    {
+      "id": "arcade-8967bacd0c83acff",
+      "platform": "arcade",
+      "title": "Joust (Green label)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\joust.zip"
+    },
+    {
+      "id": "arcade-b68040858661c538",
+      "platform": "arcade",
+      "title": "Killer Instinct",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\kinst13.zip"
+    },
+    {
+      "id": "arcade-c1c9ccbfbaa1af5f",
+      "platform": "arcade",
+      "title": "Killer Instinct 2",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\kinst2.zip"
+    },
+    {
+      "id": "arcade-87a858a263473f1f",
+      "platform": "arcade",
+      "title": "The King of Fighters 2002",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\kof2002.zip"
+    },
+    {
+      "id": "arcade-ab07d2adb38b9d6b",
+      "platform": "arcade",
+      "title": "King of the Monsters",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\kotm.zip"
+    },
+    {
+      "id": "arcade-48e8d09dd4a006f8",
+      "platform": "arcade",
+      "title": "King of the Monsters 2 - The Next Thing",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\kotm2.zip"
+    },
+    {
+      "id": "arcade-55c5db43f571d492",
+      "platform": "arcade",
+      "title": "Kung-Fu Master",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\kungfum.zip"
+    },
+    {
+      "id": "arcade-1461dd3d7813a7ce",
+      "platform": "arcade",
+      "title": "Kung-Fu Master",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\kungfumd.zip"
+    },
+    {
+      "id": "arcade-d64177517961b5f7",
+      "platform": "arcade",
+      "title": "The Last Blade 2 / Bakumatsu Roman - Dai Ni Maku Gekka no Kenshi",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\lastbld2.zip"
+    },
+    {
+      "id": "arcade-330fe3b97f4d7205",
+      "platform": "arcade",
+      "title": "Lethal Enforcers",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\lethalen.zip"
+    },
+    {
+      "id": "arcade-9064ed12867cdbce",
+      "platform": "arcade",
+      "title": "Mace: The Dark Age (boot ROM 1.0ce, HDD 1.0b)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\mace.zip"
+    },
+    {
+      "id": "arcade-e281ac3bffa35d65",
+      "platform": "arcade",
+      "title": "Mace: The Dark Age (HDD 1.0a)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\macea.zip"
+    },
+    {
+      "id": "arcade-c5c9805889982bb0",
+      "platform": "arcade",
+      "title": "Marble Madness",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\marble.zip"
+    },
+    {
+      "id": "arcade-38bf485081c37a18",
+      "platform": "arcade",
+      "title": "Mega Man 2: The Power Fighters",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\megaman2.zip"
+    },
+    {
+      "id": "arcade-28018b8da4bfa144",
+      "platform": "arcade",
+      "title": "Mortal Kombat 4",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\mk4b.zip"
+    },
+    {
+      "id": "arcade-3db1ed079e95e212",
+      "platform": "arcade",
+      "title": "Mega Man: The Power Battle (CPS2, USA 951006, SAMPLE Version)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\mmancp2u.zip"
+    },
+    {
+      "id": "arcade-e7faf08143be5cf6",
+      "platform": "arcade",
+      "title": "Metal Slug - Super Vehicle-001",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\mslug.zip"
+    },
+    {
+      "id": "arcade-d431582c2380b12c",
+      "platform": "arcade",
+      "title": "Metal Slug 4",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\mslug4.zip"
+    },
+    {
+      "id": "arcade-25e41c0d66a0599c",
+      "platform": "arcade",
+      "title": "Metal Slug 5",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\mslug5.zip"
+    },
+    {
+      "id": "arcade-c0100638ab23af44",
+      "platform": "arcade",
+      "title": "Metal Slug X - Super Vehicle-001",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\mslugx.zip"
+    },
+    {
+      "id": "arcade-2f4a95a69f22b355",
+      "platform": "arcade",
+      "title": "Ms. Pac-Man",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\mspacman.zip"
+    },
+    {
+      "id": "arcade-ec08fb08d737e7ec",
+      "platform": "arcade",
+      "title": "Marvel Vs. Capcom 2: New Age of Heroes (Export, Korea, Rev A)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\mvsc2.zip"
+    },
+    {
+      "id": "arcade-bb7c27ccedba59f5",
+      "platform": "arcade",
+      "title": "Ninja Master's - Haoh-ninpo-cho",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\ninjamas.zip"
+    },
+    {
+      "id": "arcade-2c354477016cdb26",
+      "platform": "arcade",
+      "title": "NHL Open Ice: 2 on 2 Challenge",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\openice.zip"
+    },
+    {
+      "id": "arcade-5b2f4d15ec11febb",
+      "platform": "arcade",
+      "title": "Power Drift",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\pdrift.zip"
+    },
+    {
+      "id": "arcade-af3cf0ca02af7f36",
+      "platform": "arcade",
+      "title": "Pit Fighter",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\pitfight.zip"
+    },
+    {
+      "id": "arcade-ef700355307e6148",
+      "platform": "arcade",
+      "title": "Primal Rage",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\primrage.zip"
+    },
+    {
+      "id": "arcade-e972d541b7108b26",
+      "platform": "arcade",
+      "title": "Power Stone",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\pstone.zip"
+    },
+    {
+      "id": "arcade-b3dcb39d1d5a51af",
+      "platform": "arcade",
+      "title": "Tapper (Root Beer)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\rbtapper.zip"
+    },
+    {
+      "id": "arcade-311146ec44e68aa3",
+      "platform": "arcade",
+      "title": "Ridge Racer",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\ridgerac.zip"
+    },
+    {
+      "id": "arcade-6d0f96cce57ec542",
+      "platform": "arcade",
+      "title": "Rage of the Dragons (NGM-2640?)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\rotd.zip"
+    },
+    {
+      "id": "arcade-028669ae84798721",
+      "platform": "arcade",
+      "title": "Street Fighter Alpha 3",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\sfa3.zip"
+    },
+    {
+      "id": "arcade-496583846f171352",
+      "platform": "arcade",
+      "title": "Street Fighter Alpha 3",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\sfa3ur1.zip"
+    },
+    {
+      "id": "arcade-84e1c74dfc231850",
+      "platform": "arcade",
+      "title": "Street Fighter III 3rd Strike: Fight for the Future",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\sfiii3nr1.zip"
+    },
+    {
+      "id": "arcade-a63d553241dea3ca",
+      "platform": "arcade",
+      "title": "Space Harrier",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\sharrier.zip"
+    },
+    {
+      "id": "arcade-82004ef0e91eede8",
+      "platform": "arcade",
+      "title": "Shadow Dancer",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\shdancer.zip"
+    },
+    {
+      "id": "arcade-32acfa57ff1c84f2",
+      "platform": "arcade",
+      "title": "Spider-Man: The Videogame",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\spidman.zip"
+    },
+    {
+      "id": "arcade-35f8e0ead0f1603e",
+      "platform": "arcade",
+      "title": "Sunset Riders (4 Players ver EAC)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\ssriders.zip"
+    },
+    {
+      "id": "arcade-4e8036bc954c5fe0",
+      "platform": "arcade",
+      "title": "Sunset Riders (2 Players ver ABD)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\ssridersabd.zip"
+    },
+    {
+      "id": "arcade-4bc376d423f37f49",
+      "platform": "arcade",
+      "title": "Starblade (ST2, World)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\starblad.zip"
+    },
+    {
+      "id": "arcade-278f44a10ae6d681",
+      "platform": "arcade",
+      "title": "Star Trek",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\startrek.zip"
+    },
+    {
+      "id": "arcade-1d8c3f563709ad2a",
+      "platform": "arcade",
+      "title": "Star Wars",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\starwar1.zip"
+    },
+    {
+      "id": "arcade-261c902391129824",
+      "platform": "arcade",
+      "title": "Star Wars (Atari, set 1)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\starwars.zip"
+    },
+    {
+      "id": "arcade-27d2b1dd2f8d945e",
+      "platform": "arcade",
+      "title": "Strike Fighter",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\strkfgtr.zip"
+    },
+    {
+      "id": "arcade-094f5d8db4d2f0e8",
+      "platform": "arcade",
+      "title": "Tapper (Budweiser, 1/27/84)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\tapper.zip"
+    },
+    {
+      "id": "arcade-6f7d135d1b03434d",
+      "platform": "arcade",
+      "title": "Tekken",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\tekken.zip"
+    },
+    {
+      "id": "arcade-385305e819e29fa7",
+      "platform": "arcade",
+      "title": "Tekken 2 Ver.B",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\tekken2.zip"
+    },
+    {
+      "id": "arcade-371985433f65911c",
+      "platform": "arcade",
+      "title": "Tekken Tag Tournament (World, TEG2/VER.C1, set 1)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\tektagt.zip"
+    },
+    {
+      "id": "arcade-7ccb4ba62a598890",
+      "platform": "arcade",
+      "title": "Time Killers",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\timekill.zip"
+    },
+    {
+      "id": "arcade-af448368a1feb138",
+      "platform": "arcade",
+      "title": "Teenage Mutant Ninja Turtles: Turtles in Time (4 Players ver UAA)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\tmnt2.zip"
+    },
+    {
+      "id": "arcade-a455c61ada83afe3",
+      "platform": "arcade",
+      "title": "Virtua Fighter 2",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\vf2.zip"
+    },
+    {
+      "id": "arcade-6f69d83030e6f92b",
+      "platform": "arcade",
+      "title": "Virtua Fighter Kids",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\vfkids.zip"
+    },
+    {
+      "id": "arcade-e11f763d2050e8a0",
+      "platform": "arcade",
+      "title": "Cyber Troopers Virtual-On - Twin (Export)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\von.zip"
+    },
+    {
+      "id": "arcade-a53e585e229d3b5f",
+      "platform": "arcade",
+      "title": "Virtua Racing",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\vr.zip"
+    },
+    {
+      "id": "arcade-11dcf772d3997430",
+      "platform": "arcade",
+      "title": "Vampire Savior: The Lord of Vampire",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\vsav.zip"
+    },
+    {
+      "id": "arcade-e8e6fcae67e4b09a",
+      "platform": "arcade",
+      "title": "Xenophobe",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\xenophob.zip"
+    },
+    {
+      "id": "arcade-eb3aa6e754d8e10f",
+      "platform": "arcade",
+      "title": "X-Men (4 Players ver EBA)",
+      "rom": "D:\\DevelopmentFiles\\roms\\arcade\\xmen.zip"
+    }
+  ]
+}

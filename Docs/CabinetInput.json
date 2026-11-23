@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "enabled": true,
+  "repeatDelayMs": 350,
+  "repeatIntervalMs": 140,
+  "bindings": [
+    { "key": "Up", "action": "PreviousGame" },
+    { "key": "Down", "action": "NextGame" },
+    { "key": "Left", "action": "PreviousCategory" },
+    { "key": "Right", "action": "NextCategory" },
+    { "key": "Control", "action": "Select" },
+    { "key": "Number1", "action": "Select" },
+    { "key": "Shift", "action": "Back" },
+    { "key": "Enter", "action": "Select" },
+    { "key": "Escape", "action": "Back" },
+    { "key": "Menu", "action": "PreviousLetter" },
+    { "key": "Z", "action": "NextLetter" },
+    { "key": "Space", "action": "Favorites" },
+    { "key": "X", "action": "AddFavorite" },
+    { "key": "Y", "action": "Search" },
+    { "key": "Number2", "action": "GameSettings" }
+  ]
+}

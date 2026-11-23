@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "source": "Candidate MAME core filenames for Xbox RetroArch; availability not yet verified on device",
+  "cores": [
+    {
+      "file": "mame_libretro.dll",
+      "name": "Arcade (MAME Current)",
+      "available": true
+    },
+    {
+      "file": "mame2010_libretro.dll",
+      "name": "Arcade (MAME 2010)",
+      "available": true
+    },
+    {
+      "file": "mame2003_plus_libretro.dll",
+      "name": "Arcade (MAME 2003-Plus)",
+      "available": true
+    },
+    {
+      "file": "mame2003_libretro.dll",
+      "name": "Arcade (MAME 2003)",
+      "available": true
+    },
+    {
+      "file": "mame2000_libretro.dll",
+      "name": "Arcade (MAME 2000)",
+      "available": true
+    }
+  ]
+}
