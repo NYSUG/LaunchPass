@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "music": {
+    "enabled": true,
+    "volume": 0.5,
+    "muted": false,
+    "crossfade": { "enabled": false, "seconds": 3 }
+  },
+  "branding": { "enabled": true },
+  "splash": { "enabled": true },
+  "attract": { "enabled": true, "idleSeconds": 180, "cycleSeconds": 12 }
+}

@@ -128,6 +128,11 @@ An explicit mapping to a different set is not evidence about the original set.
 Conflicting metadata stays ambiguous and is retained. Non-runnable sets without
 an explicit BIOS/device classification also stay ambiguous.
 
+Add `--friendly-titles` to replace archive-stem titles and previously imported
+raw titles with friendly names from exact local metadata. The offline generator
+removes recognized MAME region and revision qualifiers, preserves curated
+titles, and lists the changes under `title_changes`.
+
 Only visibility in the **new catalog** changes. BIOS/device archives, parent ZIPs,
 clone ZIPs and CHD directories are never modified. cloneof/romof relationships and
 dependency sets absent from the local scan are reported; this is not a ROM-set
