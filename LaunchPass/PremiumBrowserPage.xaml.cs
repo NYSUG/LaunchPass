@@ -160,10 +160,11 @@ namespace RetroPass
             if (rows.Count == 0 || !string.Equals(rows[0].Entry.PlatformId, selection.Current?.PlatformId, StringComparison.OrdinalIgnoreCase))
             {
                 rows = selection.Games.Select(entry => new PremiumWheelItem(entry, (Brush)Resources["ArcadeNavigationBrush"], (Brush)Resources["ArcadeSelectedBrush"], (Brush)Resources["ArcadeGlowBrush"])).ToList();
-                Wheel.ItemsSource = rows;
                 ResetWheelMotion();
+                Wheel.ItemsSource = rows;
             }
             syncing = false;
+            StartupLog.Write("Premium category: platform=" + selection.Current?.PlatformId + "; game=" + selection.Current?.Id + "; index=" + selection.SelectedIndex + "; rows=" + rows.Count);
             RenderSelection();
             QueueWheelRestore();
         }
@@ -196,20 +197,21 @@ namespace RetroPass
         }
         private void Wheel_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // XAML focus/virtualization can select a different row during realization.
-            // Cabinet actions, search and ItemClick own the model, never layout events.
-            if (!syncing) SynchronizeWheelSelection();
+            // Focus/virtualization can change native selection during layout. Do
+            // not write SelectedItem back from this callback: that can restart
+            // layout. Input/render and the bounded restore timer synchronize it.
         }
         private void SynchronizeWheelSelection()
         {
             if (selection == null || selection.SelectedIndex < 0 || selection.SelectedIndex >= rows.Count) return;
+            bool wasSyncing = syncing;
             syncing = true;
             try
             {
                 var expected = rows[selection.SelectedIndex];
                 if (!ReferenceEquals(Wheel.SelectedItem, expected)) Wheel.SelectedItem = expected;
             }
-            finally { syncing = false; }
+            finally { syncing = wasSyncing; }
         }
         private void Wheel_ItemClick(object sender, ItemClickEventArgs e)
         {

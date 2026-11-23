@@ -95,6 +95,30 @@ class Program
         cover.Begin(100); Check(cover.Expire(10100,true) && !cover.Active, "no-departure timeout recovers browser");
         cover.Begin(0); cover.Leave(); cover.Begin(500); Check(!cover.Departed && cover.Active, "fresh launch does not inherit departure");
         cover.Cancel(); Check(!cover.Active, "exception or page navigation cancels cover");
+        var multiCategory = new PremiumSelection(entries.Concat(CatalogReader.Parse(manyJson).Select(e => e)));
+        // Reproduce a long arcade wheel -> single Genesis -> single SNES -> arcade.
+        multiCategory.SelectGame("game90");
+        string rememberedArcade = multiCategory.Current.Id;
+        for (int turn = 0; turn < 10; turn++)
+        {
+            multiCategory.MoveCategory(1); Check(multiCategory.Current.Id == "genesis-example" && multiCategory.SelectedIndex == 0, "single Genesis selection restored");
+            multiCategory.MoveCategory(1); Check(multiCategory.Current.Id == "snes-example" && multiCategory.SelectedIndex == 0, "single SNES selection restored");
+            multiCategory.MoveCategory(1); Check(multiCategory.Current.Id == rememberedArcade, "long arcade wheel restores stable ID after both console categories");
+            multiCategory.MoveGame(-1); rememberedArcade = multiCategory.Current.Id;
+        }
+        var restore = new WheelRestoreBudget();
+        Check(!restore.Take("arcade-1941"), "restore inactive before explicit request");
+        restore.Begin("arcade-1941");
+        for (int attempt = 0; attempt < WheelRestoreBudget.MaximumAttempts; attempt++)
+            Check(restore.Take("arcade-1941"), "restore consumes one finite attempt even when layout never settles");
+        Check(!restore.Pending && !restore.Take("arcade-1941") && restore.Attempts == WheelRestoreBudget.MaximumAttempts, "unstable layout cannot keep restoration alive indefinitely");
+        restore.Begin("arcade-1941");
+        Check(!restore.Take("genesis-example") && !restore.Pending, "category input cancels old restoration before scrolling");
+        restore.Begin("arcade-1941");
+        Check(!restore.Take("arcade-1942") && !restore.Pending, "new selection cancels stale restoration");
+        restore.Begin(null); Check(!restore.Pending && !restore.Take(null), "empty category has no restoration loop");
+        restore.Begin("arcade-1941"); restore.Cancel(); Check(!restore.Take("arcade-1941"), "navigation away cancels restoration");
+        restore.Begin("arcade-1941"); Check(restore.Take("ARCADE-1941") && restore.Attempts == 1, "fresh activation resets bounded budget and preserves stable ID matching");
         Console.WriteLine("PASS: " + checks + " premium browser assertions");
     }
 }

@@ -27,9 +27,10 @@ namespace RetroPass
         private Visual wheelVisual;
         private bool wheelTranslationUnavailable;
         private bool wheelTranslationStarted;
-        private bool wheelRestoreQueued;
+        private readonly WheelRestoreBudget wheelRestore = new WheelRestoreBudget();
+        private readonly DispatcherTimer wheelRestoreTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
         private double wheelOffset;
-        private bool foreground = true, subscribed, pressure, focusPending, centerPending, scrollingMotion, snapWheelOnce;
+        private bool foreground = true, subscribed, pressure, focusPending, scrollingMotion, snapWheelOnce;
         private string lastRelease = "startup";
         private string requestedId;
         private string lastCategory;
@@ -52,18 +53,17 @@ namespace RetroPass
             Wheel.Loaded += (sender, args) => QueueWheelRestore();
             Wheel.SizeChanged += (sender, args) => QueueWheelRestore();
             Wheel.BringIntoViewRequested += (sender, args) => args.Handled = true;
-            Wheel.LayoutUpdated += (sender, args) =>
-            {
-                if (centerPending && wheelScroll != null && selection != null && wheelScroll.ScrollableHeight >= selection.SelectedIndex * WheelPitch - 1)
-                {
-                    centerPending = false;
-                    wheelScroll.ChangeView(null, selection.SelectedIndex * WheelPitch, null, true);
-                }
-                if (focusPending) FocusRealizedSelection();
-            };
+            wheelRestoreTimer.Tick += (sender, args) => RestoreWheelTick();
             Wheel.ContainerContentChanging += (sender, args) =>
             {
-                if (!args.InRecycleQueue) ApplyRowVisual(args.ItemContainer as ListViewItem, args.ItemIndex, false);
+                if (args.InRecycleQueue) return;
+                // Phase zero can still contain the previous category's template.
+                // Apply transforms after the new item bindings have been processed.
+                args.RegisterUpdateCallback((list, updated) =>
+                {
+                    if (!updated.InRecycleQueue)
+                        ApplyRowVisual(updated.ItemContainer as ListViewItem, updated.ItemIndex, false);
+                });
             };
         }
         private void StartPresentation()
@@ -81,6 +81,7 @@ namespace RetroPass
         }
         private void StopPresentation()
         {
+            wheelRestore.Cancel(); wheelRestoreTimer.Stop();
             if (subscribed)
             {
                 MemoryManager.AppMemoryUsageIncreased -= MemoryIncreased;
@@ -353,26 +354,59 @@ namespace RetroPass
                 catch (ArgumentException ex) { DisableWheelTranslation(ex); }
             }
             double padding = Math.Max(0, (Wheel.ActualHeight - WheelPitch) / 2);
-            WheelTopSpacer.Height = WheelBottomSpacer.Height = padding;
+            if (Math.Abs(WheelTopSpacer.Height - padding) > 0.1 || double.IsNaN(WheelTopSpacer.Height)) WheelTopSpacer.Height = padding;
+            if (Math.Abs(WheelBottomSpacer.Height - padding) > 0.1 || double.IsNaN(WheelBottomSpacer.Height)) WheelBottomSpacer.Height = padding;
         }
-        private async void QueueWheelRestore()
+        private void QueueWheelRestore()
         {
-            if (wheelRestoreQueued) return;
-            wheelRestoreQueued = true;
+            wheelRestore.Begin(selection?.Current?.Id);
+            if (wheelRestore.Pending) wheelRestoreTimer.Start();
+        }
+        private void RestoreWheelTick()
+        {
+            // Never mutate scroll/layout from LayoutUpdated, ViewChanged or a
+            // container-realization callback. Yield to input between bounded ticks.
             try
             {
-                await Dispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
+                if (!active || !foreground || searching || launchCover.Active || !Wheel.IsLoaded ||
+                    !wheelRestore.Take(selection?.Current?.Id))
                 {
-                    wheelRestoreQueued = false;
-                    if (!active || searching || selection?.Current == null || !Wheel.IsLoaded || launchCover.Active) return;
-                    SynchronizeWheelSelection();
-                    // One deferred measure per category/activation, not per joystick step.
-                    Wheel.UpdateLayout();
-                    InitializeWheel(); CenterWheel(false); UpdateRowVisuals(false);
-                    if (!loading) CompleteExperienceStartup();
-                });
+                    wheelRestore.Cancel(); return;
+                }
+                InitializeWheel();
+                SynchronizeWheelSelection();
+                if (wheelScroll != null && selection?.Current != null)
+                {
+                    // Fixed 82-DIP rows and symmetric header/footer spacers make
+                    // this independent of animated/transformed container coordinates.
+                    double target = Math.Min(wheelScroll.ScrollableHeight, selection.SelectedIndex * WheelPitch);
+                    if (Math.Abs(target - wheelScroll.VerticalOffset) > 1)
+                    {
+                        scrollingMotion = false;
+                        wheelScroll.ChangeView(null, target, null, true);
+                    }
+                    if (focusPending) FocusRealizedSelection();
+                    UpdateRowVisuals(false);
+                }
             }
-            catch (Exception ex) { wheelRestoreQueued = false; CompleteExperienceStartup(); StartupLog.Write("Premium wheel restore: " + ex.Message); }
+            catch (Exception ex)
+            {
+                wheelRestore.Cancel();
+                StartupLog.Write("Premium wheel restore failed: " + ex);
+            }
+            finally
+            {
+                // Failure to center must never block input or leave startup covered.
+                if (!loading) CompleteExperienceStartup();
+                if (!wheelRestore.Pending)
+                {
+                    wheelRestoreTimer.Stop();
+                    StartupLog.Write("Premium wheel restore ended: game=" + selection?.Current?.Id +
+                        "; index=" + selection?.SelectedIndex + "; rows=" + rows.Count +
+                        "; attempts=" + wheelRestore.Attempts + "; offset=" + wheelScroll?.VerticalOffset +
+                        "; extent=" + wheelScroll?.ScrollableHeight);
+                }
+            }
         }
         private void CenterWheel(bool animate = true)
         {
@@ -381,7 +415,6 @@ namespace RetroPass
             if (wheelScroll != null)
             {
                 scrollingMotion = animate && !snapWheelOnce; snapWheelOnce = false;
-                centerPending = wheelScroll.ScrollableHeight < selection.SelectedIndex * WheelPitch - 1;
                 wheelScroll.ChangeView(null, Math.Min(wheelScroll.ScrollableHeight, selection.SelectedIndex * WheelPitch), null, true);
             }
             focusPending = true; FocusRealizedSelection();
@@ -420,7 +453,7 @@ namespace RetroPass
         }
         private void ResetWheelMotion()
         {
-            wheelMotion.Reset(); scrollingMotion = false; snapWheelOnce = true; centerPending = false;
+            wheelMotion.Reset(); scrollingMotion = false; snapWheelOnce = true;
             if (wheelVisual != null && wheelTranslationStarted)
             {
                 wheelTranslationStarted = false;
@@ -448,6 +481,7 @@ namespace RetroPass
         }
         private void ApplyRowVisual(ListViewItem container, int index, bool animate)
         {
+            if (index < 0 || index >= rows.Count || !ReferenceEquals(container?.Content, rows[index])) return;
             var root = container?.ContentTemplateRoot as FrameworkElement;
             if (root == null || selection == null) return;
             var visual = ElementCompositionPreview.GetElementVisual(root);

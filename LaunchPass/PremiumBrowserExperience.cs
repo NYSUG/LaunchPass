@@ -22,10 +22,10 @@ namespace RetroPass
         private ApplicationViewBoundsMode? previousBounds;
         private void EnterExperienceBounds()
         {
-            if (!ArcadeSessionCoordinator.Current.Settings.Splash.Enabled) return;
             var view = ApplicationView.GetForCurrentView();
             previousBounds = view.DesiredBoundsMode;
             view.SetDesiredBoundsMode(ApplicationViewBoundsMode.UseCoreWindow);
+            view.TryEnterFullScreenMode();
         }
         private void LeaveExperienceBounds()
         {

@@ -64,6 +64,26 @@ namespace LaunchPass.Catalog
         }
     }
 
+    // Layout restoration must yield between attempts and must never run forever.
+    // Each category/activation gets its own finite budget; new input invalidates it.
+    public sealed class WheelRestoreBudget
+    {
+        public const int MaximumAttempts = 8;
+        private string gameId;
+        public int Attempts { get; private set; }
+        public bool Pending { get; private set; }
+        public void Begin(string id) { gameId = id; Attempts = 0; Pending = !string.IsNullOrEmpty(id); }
+        public void Cancel() { Pending = false; }
+        public bool Take(string currentId)
+        {
+            if (!Pending) return false;
+            if (!string.Equals(gameId, currentId, StringComparison.OrdinalIgnoreCase)) { Cancel(); return false; }
+            Attempts++;
+            if (Attempts >= MaximumAttempts) Cancel();
+            return true;
+        }
+    }
+
     // Keep the cover after URI acceptance; dismiss only on return, failure or a
     // foreground timeout when no departure ever occurred.
     public sealed class PremiumLaunchCover

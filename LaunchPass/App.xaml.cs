@@ -201,11 +201,29 @@ namespace RetroPass
             {
                 StartupLog.Write("Catalog navigation: begin");
                 bool premium = await ApplicationData.Current.LocalFolder.TryGetItemAsync("PremiumBrowser.enabled") is StorageFile;
-                if (premium) await ArcadeSessionCoordinator.Current.InitializeAsync();
+                if (premium)
+                {
+                    await ArcadeSessionCoordinator.Current.InitializeAsync();
+                    var view = Windows.UI.ViewManagement.ApplicationView.GetForCurrentView();
+                    view.SetDesiredBoundsMode(Windows.UI.ViewManagement.ApplicationViewBoundsMode.UseCoreWindow);
+                    view.TryEnterFullScreenMode();
+                    if (ArcadeSessionCoordinator.Current.Settings.Splash.Enabled)
+                    {
+                        // Fill the Frame while navigation constructs the premium page.
+                        // The OS-owned manifest splash itself cannot be stretched.
+                        frame.Background = new Windows.UI.Xaml.Media.ImageBrush
+                        {
+                            ImageSource = new Windows.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/Branding/TimsArcadeSplash.png")),
+                            Stretch = Windows.UI.Xaml.Media.Stretch.UniformToFill
+                        };
+                        Window.Current.Activate();
+                    }
+                }
                 StartupLog.Write("Catalog presentation: " + (premium ? "premium browser" : "existing library"));
                 bool navigated = frame.Navigate(premium ? typeof(PremiumBrowserPage) : typeof(InternalCatalogPage));
                 StartupLog.Write("Catalog navigation: returned " + navigated);
                 if (!navigated) throw new InvalidOperationException("Internal catalog navigation returned false.");
+                frame.Background = null;
             }
             InternalCatalogGame.Log("Lifecycle: catalog activation");
             Window.Current.Activate();
