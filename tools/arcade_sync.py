@@ -1033,17 +1033,32 @@ def stage_enrichment(portal, package, catalog, stage, apply, enrichment_python=N
                     elif asset['status'] in ('preserved-managed', 'preserved-custom'):
                         for path in asset['paths']:
                             paths[path] = files.path(path)
-        print(f'ArcadeItalia: finished provider checks. Checking Xbox for {len(paths)} artwork paths and Presentation.json.',
-              file=sys.stderr, flush=True)
-        with portal_step('Planning LaunchPass presentation and artwork uploads'):
-            old = xbox_presentation(portal, package)
-            remote = json_load(old) if old is not None else {'version': 1, 'games': []}
-            merged = merge_presentation(remote, report['presentation'])
-            presentation = encode_catalog(merged) if merged != remote else None
-            targets = artwork_targets(portal, package, paths)
     except (artwork.ImportFailure, artwork.ProviderCertificateError) as error:
         raise SyncError(f'Artwork import failed: {error}') from None
+    return plan_presentation_upload(portal, package, stage, report, paths)
 
+
+def artwork_batches(paths, targets, limit=32 * 1024 * 1024):
+    batch, size = [], 0
+    for path in targets:
+        length = paths[path].stat().st_size
+        if batch and size + length > limit:
+            yield batch
+            batch, size = [], 0
+        batch.append(path)
+        size += length
+    if batch:
+        yield batch
+
+
+def plan_presentation_upload(portal, package, stage, report, paths):
+    print(f'Checking Xbox for {len(paths)} artwork paths and Presentation.json.', file=sys.stderr, flush=True)
+    with portal_step('Planning LaunchPass presentation and artwork uploads'):
+        old = xbox_presentation(portal, package)
+        remote = json_load(old) if old is not None else {'version': 1, 'games': []}
+        merged = merge_presentation(remote, report['presentation'])
+        presentation = encode_catalog(merged) if merged != remote else None
+        targets = artwork_targets(portal, package, paths)
     report['xbox'] = {'artwork_uploads': targets, 'presentation_upload': presentation is not None,
                       'presentation': merged}
 
@@ -1051,11 +1066,12 @@ def stage_enrichment(portal, package, catalog, stage, apply, enrichment_python=N
         with portal_step('Rechecking LaunchPass artwork and presentation'):
             require(xbox_presentation(portal, package) == old and artwork_targets(portal, package, paths) == targets,
                     'Xbox presentation or artwork changed after planning; rerun dry-run.')
-        if targets:
+        for index, batch in enumerate(artwork_batches(paths, targets), 1):
+            print(f'Uploading LaunchPass artwork batch {index} ({len(batch)} files).', file=sys.stderr, flush=True)
             with tempfile.TemporaryFile() as archive:
                 archived_sizes = {}
                 with ZipFile(archive, 'w') as bundle:
-                    for path in targets:
+                    for path in batch:
                         source = paths[path]
                         require(relative(path).casefold().startswith('artwork\\games\\'), 'Unexpected artwork bundle member.')
                         stamp = fingerprint(source)
@@ -1092,13 +1108,38 @@ def stage_enrichment(portal, package, catalog, stage, apply, enrichment_python=N
     return report, publish
 
 
-def upload_presentation_only(portal, catalog, package, identity, stage, enrichment_python=None):
+def staged_presentation(portal, package, catalog, stage, platform):
+    import arcade_artwork as artwork
+
+    games = [game for game in catalog['games'] if game['platform'].casefold() == platform.casefold()]
+    require(games, f'No catalog games found for staged platform {platform!a}.')
+    ids = {game['id'].casefold() for game in games}
+    try:
+        files = artwork.LocalFiles(stage, stage / CATALOG)
+        presentation = artwork.presentation_read(files)
+        presentation['games'] = [row for row in presentation['games'] if row['id'].casefold() in ids]
+        paths = {}
+        for game in games:
+            directory = 'Artwork/games/' + artwork.folder(game['id'])
+            for role in ('logo', 'background', 'screenshot'):
+                for path in artwork.existing_role(files, directory, role):
+                    paths[path] = files.path(path)
+    except artwork.ImportFailure as error:
+        raise SyncError(f'Cannot read staged presentation: {error}') from None
+    require(paths or presentation['games'], f'No presentation files staged for {platform!a}.')
+    return plan_presentation_upload(portal, package, stage, {'platform': platform, 'presentation': presentation}, paths)
+
+
+def upload_presentation_only(portal, catalog, package, identity, stage, enrichment_python=None, staged_platform=None):
     verify_launchpass_package(portal, package, identity)
     current, _ = remote_catalog(portal, package)
     require(current == catalog, 'LaunchPass LocalState catalog differs from --catalog. Publish the reviewed catalog first.')
     apply = portal.apply_enabled
-    enrichment, publish = stage_enrichment(portal, package, catalog, stage, apply, enrichment_python,
-                                           browser_artwork_only=True)
+    if staged_platform:
+        enrichment, publish = staged_presentation(portal, package, catalog, stage, staged_platform)
+    else:
+        enrichment, publish = stage_enrichment(portal, package, catalog, stage, apply, enrichment_python,
+                                               browser_artwork_only=True)
     if apply:
         current, _ = remote_catalog(portal, package)
         require(current == catalog, 'LaunchPass catalog changed during enrichment; rerun dry-run.')
@@ -1138,6 +1179,7 @@ def main(argv=None):
     parser.add_argument('--enrich', action='store_true', help='Include ArcadeItalia metadata and artwork')
     parser.add_argument('--enrichment-dir', type=Path, help='Local artwork staging and cache directory')
     parser.add_argument('--enrichment-python', type=Path, help='Python executable for the artwork importer')
+    parser.add_argument('--staged-platform', help='With --upload-presentation-only, publish locally staged files for this platform')
     parser.add_argument('--exclude-bios', action='store_true',
                         help='Hide exact ArcadeItalia BIOS matches from the launcher catalog, keeping their ROMs')
     parser.add_argument('--clean-loose-arcade-components', action='store_true',
@@ -1152,6 +1194,8 @@ def main(argv=None):
     parser.add_argument('--timeout', type=float, default=60)
     args = parser.parse_args(argv)
     try:
+        require(not args.staged_platform or (args.upload_presentation_only and not args.enrichment_python),
+                '--staged-platform requires --upload-presentation-only and uses local files.')
         if args.catalog_only:
             require(args.rom_root is not None and args.xbox_rom_root is not None,
                     '--catalog-only requires --rom-root and --xbox-rom-root.')
@@ -1255,7 +1299,8 @@ def main(argv=None):
             return 0
         if args.upload_presentation_only:
             report = upload_presentation_only(portal, seed, args.launchpass_package_full_name,
-                                              args.launchpass_identity, args.enrichment_dir, args.enrichment_python)
+                                              args.launchpass_identity, args.enrichment_dir, args.enrichment_python,
+                                              args.staged_platform)
             print(json.dumps(report, indent=2, ensure_ascii=True))
             return 0
         options = dict(seed=seed, root=args.rom_root, retroarch=args.retroarch_package_full_name,

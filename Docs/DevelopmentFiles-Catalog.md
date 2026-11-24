@@ -200,6 +200,36 @@ published catalog matches and sends missing logos, backgrounds, screenshots
 and presentation fields to LaunchPass LocalState. It does not replace the
 catalog or transfer ROM files.
 
+## Genesis and SNES
+
+Export the working Xbox catalog after adding one game to the platform manually.
+That supplies the existing platform ID and tested core. For Genesis, run from
+the repository root:
+
+```sh
+.venv/bin/python3 tools/console_library.py \
+  --platform genesis \
+  --catalog Builds/catalog/InternalCatalog.current-console.json \
+  --rom-root /Users/timothyjohnson/Roms/Genesis \
+  --xbox-rom-root 'D:\DevelopmentFiles\roms\genesis' \
+  --enrichment-dir /Users/timothyjohnson/Roms/LaunchPass/Artwork
+```
+
+Use the Xbox folder from the working game. Review the output, then add
+`--stage-artwork --output Builds/catalog/InternalCatalog.genesis.json`
+to stage assets and save the new catalog. Use Python with Pillow. Libretro
+No-Intro matches use the cartridge CRC and size. Unmatched content keeps its
+filename title and is listed in the report. The run keeps the platform's curated
+entries and settings and preserves the other platforms as exported.
+
+Copy the ROMs to the matching mounted DevelopmentFiles directory and verify that
+the new catalog paths exist on the share. Use `--upload-catalog-only` to publish
+the catalog. Then use `--upload-presentation-only --staged-platform genesis`
+with the same catalog path and `--enrichment-dir`. This publishes the local
+box art, screenshots, year, publisher and genre without contacting ArcadeItalia
+or transferring ROMs. For SNES, use `--platform snes`, the working SNES path,
+and `--staged-platform snes`.
+
 ## Validation status on the Windows implementation machine
 
 The new tests cover flat macOS-style paths, D: paths, curation, root migration,

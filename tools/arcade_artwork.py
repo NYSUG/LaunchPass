@@ -167,7 +167,8 @@ class LocalFiles:
                 raise ImportFailure('Output path contains a symlink: ' + str(parent))
         if not path.resolve().is_relative_to(self.root.resolve()):
             raise ImportFailure('Output escaped root')
-        if path.resolve() == self.catalog or (path.exists() and path.is_file() and os.path.samefile(path, self.catalog)):
+        if path.resolve() == self.catalog or (path.is_file() and self.catalog.exists()
+                                              and os.path.samefile(path, self.catalog)):
             raise ImportFailure('Refusing to replace input catalog')
         return path
 
