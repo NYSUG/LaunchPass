@@ -60,7 +60,7 @@ namespace RetroPass
                 ((SolidColorBrush)Resources["ArcadeGlowBrush"]).Color = Colors.Transparent;
             if (!startupComplete && settings.Splash.Enabled)
             {
-                StartupEntrance.Source = new BitmapImage(new Uri("ms-appx:///Assets/Branding/TimsArcadeSplash.png")) { DecodePixelWidth = 1920 };
+                StartupEntrance.Source = new BitmapImage(new Uri("ms-appx:///Assets/Branding/StartupSplash.png")) { DecodePixelWidth = 1920 };
                 StartupOverlay.Visibility = Visibility.Visible;
             }
         }

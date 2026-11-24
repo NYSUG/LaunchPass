@@ -208,7 +208,7 @@
     <Content Include="Assets\Background\Purpz-LP.mp4" />
     <Content Include="Assets\Background\Waves-LP.mp4" />
     <Content Include="Assets\Background\Zoom-LP.mp4" />
-    <Content Include="Assets\DescriptionBackground.png" /><Content Include="Assets\Branding\TimsArcadeSplash.png" />
+    <Content Include="Assets\DescriptionBackground.png" /><Content Include="Assets\Branding\TimsArcadeSplash.png" /><Content Include="Assets\Branding\StartupSplash.png" />
     <Content Include="Assets\empty.png" />
     <Content Include="Assets\LargeTile.scale-100.png" />
     <Content Include="Assets\LargeTile.scale-125.png" />

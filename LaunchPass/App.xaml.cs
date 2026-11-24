@@ -213,7 +213,7 @@ namespace RetroPass
                         // The OS-owned manifest splash itself cannot be stretched.
                         frame.Background = new Windows.UI.Xaml.Media.ImageBrush
                         {
-                            ImageSource = new Windows.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/Branding/TimsArcadeSplash.png")),
+                            ImageSource = new Windows.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///Assets/Branding/StartupSplash.png")),
                             Stretch = Windows.UI.Xaml.Media.Stretch.UniformToFill
                         };
                         Window.Current.Activate();
