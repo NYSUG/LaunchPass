@@ -194,6 +194,9 @@ namespace RetroPass
         private void FocusSelection()
         {
             CenterWheel();
+            // A distant letter/search jump can land outside the realized rows.
+            // Recenter and focus again after virtualization has updated layout.
+            QueueWheelRestore();
         }
         private void Wheel_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -257,7 +260,10 @@ namespace RetroPass
                 if (action == CabinetAction.PreviousGame || action == CabinetAction.NextGame)
                     selection.MoveGame(action == CabinetAction.PreviousGame ? -1 : 1);
                 else if (action == CabinetAction.PreviousLetter || action == CabinetAction.NextLetter)
+                {
                     selection.Select(CabinetNavigation.Letter(selection.Games.Select(entry => entry.Title).ToArray(), selection.SelectedIndex, action == CabinetAction.PreviousLetter ? -1 : 1));
+                    ResetWheelMotion();
+                }
                 else return;
                 RenderSelection();
             }

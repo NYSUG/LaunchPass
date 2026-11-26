@@ -2,6 +2,7 @@ using LaunchPass;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Storage;
@@ -22,6 +23,23 @@ namespace RetroPass
         public string LaunchPassRootPath { get; set; }
         public bool InternalCatalogMode { get; private set; }
         public bool IsLoadMainPage { get; set; } = true;
+        private static readonly TimeSpan RetroArchExitGracePeriod = TimeSpan.FromSeconds(2);
+        private readonly Stopwatch timeSinceEmulatorReturn = new Stopwatch();
+
+        internal async Task<bool> LaunchGameUriAsync(Uri uri)
+        {
+            // RetroArch sends launchOnExit before its background handler exits the process.
+            if (uri.Scheme.Equals("retroarch", StringComparison.OrdinalIgnoreCase) && timeSinceEmulatorReturn.IsRunning)
+            {
+                TimeSpan remaining = RetroArchExitGracePeriod - timeSinceEmulatorReturn.Elapsed;
+                if (remaining > TimeSpan.Zero)
+                {
+                    StartupLog.Write("Waiting for RetroArch shutdown before relaunch: " + remaining.TotalMilliseconds.ToString("F0") + " ms");
+                    await Task.Delay(remaining);
+                }
+            }
+            return await Windows.System.Launcher.LaunchUriAsync(uri);
+        }
 
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
@@ -152,6 +170,9 @@ namespace RetroPass
             {
             StartupLog.Write("OnActivated: kind=" + args.Kind + " previous=" + args.PreviousExecutionState);
             var protocol = args as ProtocolActivatedEventArgs;
+            bool returnedFromEmulator = protocol != null && protocol.Uri.Scheme.Equals("launchpass", StringComparison.OrdinalIgnoreCase);
+            if (returnedFromEmulator)
+                timeSinceEmulatorReturn.Restart();
             if (await TryShowInternalStorageProbe("OnActivated kind=" + args.Kind + " previous=" + args.PreviousExecutionState +
                 (protocol == null ? "" : " URI=" + protocol.Uri)))
             {
@@ -159,7 +180,7 @@ namespace RetroPass
                 return;
             }
 
-            if (protocol != null && protocol.Uri.Scheme.Equals("launchpass", StringComparison.OrdinalIgnoreCase))
+            if (returnedFromEmulator)
                 await GameCoreService.Current.ObserveAsync(false, true);
             if (await TryShowInternalCatalog())
             {

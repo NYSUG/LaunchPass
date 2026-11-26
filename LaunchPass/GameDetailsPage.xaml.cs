@@ -263,7 +263,8 @@ namespace RetroPass
                 string urlScheme = UrlSchemeGenerator.GetUrl(game);
                 Uri uri = new Uri(urlScheme);
                 Trace.TraceInformation("GameDetailsPage: LaunchUriAsync: {0}", uri.ToString());
-                Launcher.LaunchUriAsync(uri);
+                if (!await ((App)Application.Current).LaunchGameUriAsync(uri))
+                    Trace.TraceWarning("GameDetailsPage: Emulator activation declined");
             }
             catch (Exception)
             {

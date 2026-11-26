@@ -39,8 +39,8 @@ namespace RetroPass
                 // Use the very same production generator and activation API as the probe.
                 string url = UrlSchemeGenerator.GetUrl(this);
                 if (url != prepared.Request.ProtocolUri) throw new InvalidOperationException("Core override launch format differs from the validated generator.");
-                Log("Game=" + Entry.Id + " activation requested URI=" + url);
-                bool activated = await Launcher.LaunchUriAsync(new Uri(url));
+                Log("Game=" + Entry.Id + " preparing activation URI=" + url);
+                bool activated = await ((App)Application.Current).LaunchGameUriAsync(new Uri(url));
                 accepted = activated;
                 await GameCoreService.Current.CompleteAsync(attempt, activated);
                 Log("Game=" + Entry.Id + " LaunchUriAsync=" + activated + "; game loading requires Xbox verification");
