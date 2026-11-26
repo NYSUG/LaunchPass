@@ -92,3 +92,84 @@ to match the original bench test.
 If the serial phases appear but the strip stays dark, check the external 5 V,
 common ground, pin 1 enable, and DIN connection. If the colors appear in the
 wrong order, check the strip's color order and adjust `kColorOrder`.
+
+## Wi-Fi and network mode
+
+The default `esp32dev` environment runs the hardware diagnostic. The
+`esp32-network` environment starts both zones off and controls them over HTTP.
+From this project directory, copy the credentials template if you don't already
+have a local copy, then fill in your 2.4 GHz network's SSID and password.
+
+```sh
+cp -n include/WifiCredentials.example.h include/WifiCredentials.h
+pio run -e esp32-network
+pio run -e esp32-network -t upload --upload-port /dev/cu.usbserial-0001
+pio device monitor --port /dev/cu.usbserial-0001 --baud 115200
+```
+
+The credentials header is ignored by Git. Network firmware binaries contain
+the credentials, so keep those binaries private. With no credentials, the
+network build leaves Wi-Fi disabled. Watch for `Wi-Fi IP:` on serial after
+boot or reconnect. Press EN with the monitor open if you missed the address.
+
+Use a trusted LAN. The server accepts API clients on the ESP32's local IPv4
+subnet and uses plain HTTP without authentication. Keep the ESP32 off public
+networks and leave router port forwarding disabled. The render loop runs
+independently of the HTTP task. Effects continue running during a Wi-Fi outage.
+Effect state is in memory and resets to off when the ESP32 restarts.
+
+## HTTP API
+
+| Method and path | Request | Successful response |
+| --- | --- | --- |
+| `GET /api/status` | Empty | `200` with `firmware_version`, `uptime_ms`, `ip_address`, `wifi_status`, and `enabled_zone_count` |
+| `GET /api/zones` | Empty | `200` with a `zones` array |
+| `POST /api/zones/{name}` | One effect object | `202` with `{"accepted":true,"revision":1}` |
+| `POST /api/scene` | `{"zones":{"left":{...},"right":{...}}}` | `202` with `accepted` and the queued `revision` |
+| `POST /api/blackout` | Empty | `200` with `{"blackout":true}` after the off frame is sent |
+
+Status reports uptime as an integer in milliseconds, enabled zone count as
+an integer, and the other fields as strings. Each zone entry includes
+`name`, `gpio`, `led_count`, `enabled`, `reverse`, and `effect`.
+Active effects report their applicable parameters using the request field
+names below. Disabled zones are listed with `effect: "off"`.
+
+An effect object requires an `effect` string.
+
+| Effect | Optional parameters |
+| --- | --- |
+| `off` | None |
+| `solid` | `color`, `brightness` |
+| `breathe` | `color`, `brightness`, `speed_ms` for a full cycle (default 2000) |
+| `chase` | `color`, `brightness`, `speed_ms` per pixel (default 250) |
+
+`color` is an RGB array of three integers from 0 to 255, defaulting to
+`[255,255,255]`. `brightness` is an integer from 0 to 255, defaulting to
+255. It scales the color within the hardware cap of 16/255. `speed_ms`
+is an integer from 20 to 60000. Each update replaces that zone's settings
+and restarts the effect. Send JSON bodies with
+`Content-Type: application/json`. The maximum body size is 2048 bytes.
+
+A scene validates all entries before queuing any of them. Named zones begin
+on the same render frame and share the same start time. Omitted zones keep
+running. If updates to the same zone arrive within one frame, the latest
+one takes effect. A blackout requests an immediate frame and waits briefly
+for it to be sent.
+
+API validation errors use `{"error":"message"}`. Status codes include
+`400` for invalid JSON or effect parameters, `403` for a client outside the
+local subnet, `404` for an unknown zone, `408` for a body read timeout,
+`409` for a disabled zone, `413` for an oversized body, `415` for an
+unsupported content type, and `503` if the blackout frame is still pending.
+
+## Expanding to eight outputs
+
+The pinned FastLED build uses the ESP32 RMT driver. The classic ESP32 has
+eight RMT memory blocks, and the driver defaults to two blocks per
+transmitter, so it can start up to four strips in parallel and schedules
+additional strips as channels become available. Scene settings still latch
+together in software, but eight physical strips can show inter-group skew.
+Longer strips and Wi-Fi traffic increase the time and interrupt load per
+frame. Validate timing and visible stability under Wi-Fi traffic at the
+intended strip lengths before enabling all eight outputs. Size the external
+5 V supply and distribution for the installed strips.

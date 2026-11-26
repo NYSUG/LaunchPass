@@ -9,14 +9,14 @@ using namespace LightingConfig;
 using Effects::Settings;
 using Effects::Type;
 
-constexpr Settings off{Type::Off, CRGB::Black, 0};
+constexpr Settings off{Type::Off, CRGB::Black, 0, 0};
 
 constexpr Settings solid(CRGB color) {
-    return {Type::Solid, color, 0};
+    return {Type::Solid, color, 0, 255};
 }
 
 constexpr Settings chase(CRGB color, uint32_t stepMs) {
-    return {Type::Chase, color, stepMs};
+    return {Type::Chase, color, stepMs, 255};
 }
 
 struct Phase {
