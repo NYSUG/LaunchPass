@@ -162,6 +162,53 @@ local subnet, `404` for an unknown zone, `408` for a body read timeout,
 `409` for a disabled zone, `413` for an oversized body, `415` for an
 unsupported content type, and `503` if the blackout frame is still pending.
 
+## Validate the API from macOS
+
+Use the address from the serial monitor and run the following from your Mac
+on the same LAN. Pause after each group to check the strips.
+
+```sh
+BASE=http://192.168.1.100
+curl -fsS "$BASE/api/status"
+curl -fsS "$BASE/api/zones"
+
+# Independent colors
+curl -fsS "$BASE/api/zones/left" -H 'Content-Type: application/json' \
+  -d '{"effect":"solid","color":[255,0,0]}'
+curl -fsS "$BASE/api/zones/right" -H 'Content-Type: application/json' \
+  -d '{"effect":"solid","color":[0,0,255]}'
+
+# Independent animations
+curl -fsS "$BASE/api/zones/left" -H 'Content-Type: application/json' \
+  -d '{"effect":"chase","color":[255,0,0],"speed_ms":180}'
+curl -fsS "$BASE/api/zones/right" -H 'Content-Type: application/json' \
+  -d '{"effect":"breathe","color":[0,0,255],"speed_ms":2400}'
+
+# Synchronized scene
+curl -fsS "$BASE/api/scene" -H 'Content-Type: application/json' \
+  -d '{"zones":{"left":{"effect":"breathe","color":[0,255,0],"speed_ms":1600},"right":{"effect":"breathe","color":[0,255,0],"speed_ms":1600}}}'
+
+# Leave right breathing while left goes dark, then turn both off.
+curl -fsS "$BASE/api/zones/left" -H 'Content-Type: application/json' \
+  -d '{"effect":"off"}'
+curl -fsS -X POST "$BASE/api/blackout"
+curl -fsS "$BASE/api/zones"
+```
+
+### Bench results
+
+The ESP32 reported its DHCP address at 115200 baud. All five endpoints
+passed curl checks from macOS. Fourteen invalid requests were rejected,
+including a scene with one invalid zone effect that left both zones
+unchanged. Forty successive status requests succeeded with both animated
+effects active.
+
+The first 10 pixels on GPIO25 and GPIO26 were visually verified with Wi-Fi
+connected. Independent red and blue solids, a red chase alongside a blue
+breathe, synchronized green breathing, left-only off, and global blackout
+all passed. Wi-Fi reconnection during an access-point outage remains
+untested.
+
 ## Expanding to eight outputs
 
 The pinned FastLED build uses the ESP32 RMT driver. The classic ESP32 has
