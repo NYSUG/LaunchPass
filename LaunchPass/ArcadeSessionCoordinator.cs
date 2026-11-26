@@ -35,12 +35,19 @@ namespace RetroPass
         private readonly DispatcherTimer timer=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(100)};
         private readonly CoreWindow window;
         private readonly ArcadeRadioController radio;
+        private ArcadeLightingDirector lighting;
         private PremiumBrowserPage presenter;
         private bool initialized,scanning,ticking;
         private Task initialization;
         internal double Now=>clock.Elapsed.TotalMilliseconds;
         internal event Action<string,string> ExperienceChanged;
-        internal void SelectionChanged(string id){ExperienceChanged?.Invoke("selection",id);}
+        internal bool LightingEnabled => lighting != null;
+        internal void BlackoutLighting() => lighting?.Blackout();
+        internal void SelectionChanged(string id)
+        {
+            lighting?.SelectionChanged(id, Now);
+            ExperienceChanged?.Invoke("selection", id);
+        }
         private ArcadeSessionCoordinator()
         {
             window=Window.Current.CoreWindow;Policy.Foreground=Window.Current.Visible;
@@ -84,10 +91,30 @@ namespace RetroPass
                 }
             }
             catch(Exception ex){Settings=new ArcadeExperienceSettings();StartupLog.Write("ArcadeExperience settings rejected; safe defaults: "+ex.Message);}
+            await InitializeLightingAsync();
             StartupLog.Write("ArcadeExperience effective settings: music="+Settings.Music.Enabled+
                 "; attract="+Settings.Attract.Enabled+"; idleSeconds="+Settings.Attract.IdleSeconds+"; cycleSeconds="+Settings.Attract.CycleSeconds+"; restart required after editing JSON");
             initialized=true;radio.Configure(Settings.Music);Resume();
         }
+        private async Task InitializeLightingAsync()
+        {
+            try
+            {
+                var file = await ApplicationData.Current.LocalFolder.TryGetItemAsync("ArcadeLighting.json") as StorageFile;
+                if (file == null) return;
+                if ((await file.GetBasicPropertiesAsync()).Size > 4096) throw new FormatException("Settings exceed 4 KiB.");
+                var settings = ArcadeLightingSettings.Parse(await FileIO.ReadTextAsync(file));
+                if (!settings.Enabled)
+                {
+                    LogLighting("Disabled by configuration.");
+                    return;
+                }
+                lighting = new ArcadeLightingDirector(new ArcadeLightingClient(settings, LogLighting), LogLighting);
+                LogLighting("Enabled at " + settings.Endpoint + ", timeout " + settings.Timeout.TotalMilliseconds + " ms.");
+            }
+            catch (Exception ex) { LogLighting("Settings unavailable; lighting disabled: " + ex.Message); }
+        }
+        private static void LogLighting(string message) => StartupLog.Write("Arcade lighting: " + message);
         internal void Attach(PremiumBrowserPage page){presenter=page;Engine.Reset(Now);Resume();}
         internal void Detach(PremiumBrowserPage page){if(ReferenceEquals(presenter,page)){Engine.Reset(Now);presenter=null;}}
         private bool Key(VirtualKey key,bool down)
@@ -125,6 +152,7 @@ namespace RetroPass
                 var frame=Window.Current.Content as Frame;
                 Policy.InternalFrontend=((App)Application.Current).InternalCatalogMode&&frame?.Content is Page&&!(frame.Content is InternalStorageProbePage);
                 Policy.PremiumVisible=presenter!=null&&ReferenceEquals(frame?.Content,presenter);
+                if (lighting != null && Policy.PremiumVisible && Policy.Foreground) PumpLighting();
                 Policy.Ready=Policy.PremiumVisible&&presenter.ExperienceReady;
                 Policy.Dialog=Policy.PremiumVisible&&presenter.ExperienceDialog;
                 presenter?.TickLaunchCover(Now,Policy.Foreground);
@@ -149,6 +177,11 @@ namespace RetroPass
         {
             try { await radio.TickAsync(); }
             catch(Exception ex) { StartupLog.Write("Radio tick: "+ex.Message);radio.Suspend(); }
+        }
+        private async void PumpLighting()
+        {
+            try { await lighting.TickAsync(Now); }
+            catch (Exception ex) { LogLighting("Command failed: " + ex.Message); }
         }
     }
 }

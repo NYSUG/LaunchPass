@@ -68,6 +68,56 @@ using (var cancel = new CancellationTokenSource())
 Check(await client.GetStatusAsync() == null && logs.Last().Contains("timed out"), "Short request timeout.");
 handler.Slow = false;
 Check(await client.GetStatusAsync() != null, "Recovery after cancellation and timeout.");
+using var directorClient = new ArcadeLightingClient(settings, logs.Add, handler);
+var director = new ArcadeLightingDirector(directorClient, logs.Add);
+director.SelectionChanged("initial", 0);
+int beforeDirector = handler.Count;
+await director.TickAsync(0);
+using (var startup = JsonDocument.Parse(handler.Body))
+{
+    var pair = startup.RootElement.GetProperty("zones");
+    Check(handler.Path == "/api/scene" && pair.GetProperty("left").GetRawText() == pair.GetProperty("right").GetRawText() &&
+        pair.GetProperty("left").GetProperty("effect").GetString() == "breathe", "Synchronized green startup.");
+}
+await director.TickAsync(100);
+Check(handler.Path == "/api/status" && logs.Last().Contains("firmware 0.2.0"), "Startup status diagnostic.");
+director.SelectionChanged("initial", 120);
+await director.TickAsync(250);
+Check(handler.Count == beforeDirector + 2, "Initial render and repeated render preserve breathing.");
+director.SelectionChanged("one", 300);
+director.SelectionChanged("two", 350);
+await director.TickAsync(400);
+Check(handler.Count == beforeDirector + 2, "Waiting for selection coalescing.");
+await director.TickAsync(425);
+string firstPalette = handler.Body;
+Check(handler.Count == beforeDirector + 3 && logs.Last().Contains("Selection two queued"), "Only the latest selection is sent.");
+director.SelectionChanged("three", 430);
+await director.TickAsync(600);
+Check(handler.Count == beforeDirector + 3, "Scene dispatch interval.");
+await director.TickAsync(675);
+Check(handler.Count == beforeDirector + 4 && handler.Body != firstPalette, "Next scene uses the alternate palette.");
+director.SelectionChanged("four", 690);
+director.Blackout();
+await director.TickAsync(700);
+await director.TickAsync(1000);
+Check(handler.Count == beforeDirector + 5 && handler.Path == "/api/blackout", "Blackout discards older queued colors.");
+director.SelectionChanged("four", 1010);
+await director.TickAsync(1140);
+Check(handler.Count == beforeDirector + 5, "A repeated selection leaves blackout in effect.");
+
+handler.Slow = true;
+director.SelectionChanged("offline", 1200);
+var inFlight = director.TickAsync(1350);
+for (int i = 0; i < 30; i++)
+{
+    director.SelectionChanged("queued-" + i, 1360 + i);
+    await director.TickAsync(1400 + i);
+}
+Check(handler.Count == beforeDirector + 6, "Rapid navigation adds no HTTP calls while one is in flight.");
+await inFlight;
+handler.Slow = false;
+await director.TickAsync(1700);
+Check(handler.Count == beforeDirector + 7 && logs.Last().Contains("Selection queued-29 queued"), "Latest selection proceeds after timeout.");
 Console.WriteLine($"PASS: {checks} lighting assertions.");
 
 sealed class FirmwareHandler : HttpMessageHandler

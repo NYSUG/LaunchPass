@@ -119,6 +119,8 @@
                         <Run Text="    BACK / B Library" />
                     </TextBlock>
                     <TextBlock x:Name="StatusText" FontSize="14" Foreground="#73E1F5" TextWrapping="Wrap" Margin="0,4,0,0" />
+                    <TextBlock x:Name="LightingHint" Visibility="Collapsed" FontSize="14" Foreground="#73E1F5"
+                               Text="RB / F9 Lights off" />
                 </StackPanel>
             </Grid>
         </Grid>

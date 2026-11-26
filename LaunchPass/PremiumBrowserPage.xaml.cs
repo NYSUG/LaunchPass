@@ -350,6 +350,13 @@ namespace RetroPass
             if (!active || searching || !ReferenceEquals(Frame?.Content, this)) return;
             // Dialogs register their own cabinet target and retain native controller handling.
             if (searching || FindParentDialog(FocusManager.GetFocusedElement() as DependencyObject)) return;
+            var session = ArcadeSessionCoordinator.Current;
+            if (session.LightingEnabled && (e.OriginalKey == VirtualKey.GamepadRightShoulder || e.OriginalKey == VirtualKey.F9))
+            {
+                e.Handled = true;
+                if (!e.KeyStatus.WasKeyDown) session.BlackoutLighting();
+                return;
+            }
             CabinetAction action;
             if (GamepadAction(e.OriginalKey, out action))
             {

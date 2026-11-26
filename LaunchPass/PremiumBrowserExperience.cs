@@ -47,6 +47,7 @@ namespace RetroPass
         private void ApplyExperienceSettings()
         {
             var settings = ArcadeSessionCoordinator.Current.Settings;
+            LightingHint.Visibility = ArcadeSessionCoordinator.Current.LightingEnabled ? Visibility.Visible : Visibility.Collapsed;
             BrandTag.Visibility = settings.Branding.Enabled ? Visibility.Visible : Visibility.Collapsed;
             if (!settings.Branding.Enabled)
             {
